@@ -1,3 +1,4 @@
+/* GENEL AYARLAR */
 body {
     margin: 0; width: 100vw; height: 100vh;
     background: #0f0f13 no-repeat center center fixed;
@@ -6,92 +7,99 @@ body {
     overflow: hidden;
 }
 
-.main-stage { position: relative; width: 1200px; height: 700px; background: transparent; }
+.main-stage { position: relative; width: 1200px; height: 700px; }
 
-/* WIDGETLAR */
+/* WIDGET YAPISI */
 .widget {
     position: absolute;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(20px);
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(15px);
+    border-radius: 10px;
     z-index: 10;
-    display: flex; flex-direction: column;
-    box-sizing: border-box;
-    box-shadow: none !important; 
+    display: flex;
+    flex-direction: column;
 }
 
-/* Admin Modu ve Resize (Büyütme/Küçültme) */
 .admin-mode { 
-    border: 1px solid rgba(0, 242, 255, 0.3) !important; 
+    border: 1px solid rgba(0, 242, 255, 0.1); 
     resize: both !important; 
     overflow: hidden !important; 
 }
 
-/* Kaydırma Çubuklarını Gizle */
-#chat-window, #user-list {
-    flex: 1;
-    overflow-y: auto;
-    -ms-overflow-style: none !important;
-    scrollbar-width: none !important;
+/* SOHBET AKIŞI: YENİLER EN ÜSTE GELİR, ESKİLER AŞAĞI KAYAR */
+#chat-window {
+    flex: 1; 
+    overflow-y: auto; 
+    padding: 12px;
+    display: flex;
+    flex-direction: column; /* Standart dizilim */
+    scrollbar-width: none;
 }
-#chat-window::-webkit-scrollbar, #user-list::-webkit-scrollbar { display: none !important; }
+#chat-window::-webkit-scrollbar { display: none; }
 
-/* Sürükleme Tutamacı */
+#user-list {
+    flex: 1; overflow-y: auto; padding: 12px;
+    scrollbar-width: none;
+}
+#user-list::-webkit-scrollbar { display: none; }
+
+/* TUTAMAC */
 .drag-handle { 
-    width: 100%; 
-    height: 25px; 
-    background: rgba(255,255,255,0.05); 
-    cursor: move; 
-    flex-shrink: 0;
+    width: 100%; height: 8px; background: transparent; 
+    cursor: default; flex-shrink: 0;
+}
+.edit-mode-active .drag-handle { background: rgba(0, 242, 255, 0.3); cursor: move; }
+
+/* MESAJ YAZMA ALANI */
+#input-widget { height: auto !important; min-height: 45px; }
+.input-container {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 10px; background: rgba(0, 0, 0, 0.3);
+    border-radius: 0 0 10px 10px;
 }
 
-/* Stil Araç Çubuğu */
-.style-toolbar {
-    display: flex; gap: 8px; padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.05);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    align-items: center; flex-shrink: 0;
-    min-height: 40px;
-}
-.style-toolbar button {
-    background: rgba(255, 255, 255, 0.1); border: none; color: white;
-    cursor: pointer; border-radius: 4px; padding: 4px 10px; font-size: 13px;
-    line-height: 1; transition: 0.2s;
-}
-.style-toolbar button:hover { background: rgba(0, 242, 255, 0.2); }
-
-#color-picker { 
-    border: none; width: 28px; height: 28px; cursor: pointer; 
-    background: transparent; padding: 0; flex-shrink: 0;
-}
-#font-size-display { color: #00f2ff; font-size: 11px; margin-left: auto; font-weight: bold; }
-
-/* Mesaj Yazma Alanı */
 input#msg {
-    background: rgba(255, 255, 255, 0.05); border: none !important; color: #fff;
-    padding: 12px 15px; width: 100%; outline: none; font-size: 14px; box-sizing: border-box;
+    flex: 1; background: transparent; border: none !important;
+    color: #fff; outline: none; font-size: 14px;
 }
 
-/* Admin Temizle Butonu */
-.clear-btn {
-    position: absolute; top: 5px; right: 10px;
-    background: rgba(255, 0, 0, 0.4); color: white;
-    font-size: 10px; padding: 3px 8px; border-radius: 4px;
-    cursor: pointer; z-index: 100; display: none;
+/* RENK SEÇİCİ TEMİZLİĞİ */
+#color-picker {
+    -webkit-appearance: none; -moz-appearance: none; appearance: none;
+    width: 24px; height: 24px; background-color: transparent;
+    border: none; cursor: pointer; padding: 0;
 }
+#color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+#color-picker::-webkit-color-swatch { border: none; border-radius: 4px; }
 
-.online-footer { height: 32px; background: rgba(255, 0, 0, 0.1); text-align: center; line-height: 32px; flex-shrink: 0; }
-.logout-btn { color: #ff4b2b; font-size: 11px; font-weight: bold; cursor: pointer; }
+.mini-tools { 
+    display: flex; gap: 5px; align-items: center; 
+    border-right: 1px solid rgba(255,255,255,0.1); padding-right: 8px;
+}
+.mini-tools button {
+    background: rgba(255, 255, 255, 0.05); border: none; color: #ccc;
+    width: 24px; height: 24px; border-radius: 4px; cursor: pointer;
+    font-size: 11px; display: flex; align-items: center; justify-content: center;
+}
+.active-tool { background: rgba(0, 242, 255, 0.4) !important; color: #000 !important; }
 
-/* Mesaj Balonu */
+/* MESAJ GÖRÜNÜMÜ (SAF METİN) */
 .msg { 
-    background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px; 
-    margin-bottom: 6px; border-left: 3px solid rgba(0, 242, 255, 0.5); word-wrap: break-word;
+    background: transparent; 
+    padding: 3px 0; 
+    margin-bottom: 2px; 
+    word-wrap: break-word;
+    animation: fadeInDown 0.4s ease; /* Yeni mesajın yukarıdan gelme efekti */
 }
 
-/* Online Listesi Satırları */
-#user-list div {
-    padding: 4px 8px; border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02); margin-bottom: 3px;
-    font-weight: bold;
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#admin-ctrl { position: fixed; top: 15px; left: 15px; z-index: 999; display: none; gap: 10px; }
+.admin-btn {
+    background: rgba(0, 242, 255, 0.1); border: 1px solid #00f2ff;
+    color: #00f2ff; padding: 6px 15px; border-radius: 30px;
+    cursor: pointer; font-size: 11px; font-weight: bold;
 }

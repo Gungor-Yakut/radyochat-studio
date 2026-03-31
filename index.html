@@ -2,38 +2,42 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Filiz Yeşili FM - Studio</title>
-    <link rel="stylesheet" href="style.css?v=1.2">
+    <title>Filiz Yeşili FM - Dynamic Studio</title>
+    <link rel="stylesheet" href="style.css?v=7.0">
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/draggabilly@3/dist/draggabilly.pkgd.min.js"></script>
 </head>
-<body>
+<body id="main-body">
+
+<div id="admin-ctrl">
+    <div class="admin-btn" onclick="toggleEditMode()" id="edit-btn">DÜZENLE: KAPALI</div>
+    <div class="admin-btn" style="border-color:#ff4b2b; color:#ff4b2b;" onclick="clearAllMessages()">TEMİZLE</div>
+</div>
 
 <div class="main-stage">
     <div class="widget" id="chat-widget">
         <div class="drag-handle"></div>
-        <div id="clear-chat" class="clear-btn" onclick="clearAllMessages()">TEMİZLE</div>
         <div id="chat-window"></div>
     </div>
     
     <div class="widget" id="input-widget">
         <div class="drag-handle"></div>
-        <div class="style-toolbar">
-            <input type="color" id="color-picker" value="#00f2ff" title="Rengini Seç">
-            <button type="button" onclick="toggleStyle('bold', this)" title="Kalın"><b>B</b></button>
-            <button type="button" onclick="toggleStyle('italic', this)" title="İtalik"><i>I</i></button>
-            <button type="button" onclick="changeFontSize(1)" title="Büyüt">+</button>
-            <button type="button" onclick="changeFontSize(-1)" title="Küçült">-</button>
-            <span id="font-size-display">14px</span>
+        <div class="input-container">
+            <div class="mini-tools">
+                <input type="color" id="color-picker" value="#00f2ff" oninput="updateMyColor(this.value)">
+                <button id="btn-bold" onclick="toggleStyle('bold')">B</button>
+                <button id="btn-italic" onclick="toggleStyle('italic')">I</button>
+                <button onclick="changeFontSize(2)">+</button>
+                <button onclick="changeFontSize(-2)">-</button>
+            </div>
+            <input type="text" id="msg" placeholder="Mesaj yaz..." autocomplete="off">
         </div>
-        <input type="text" id="msg" placeholder="Mesaj yaz..." autocomplete="off">
     </div>
 
     <div class="widget" id="online-widget">
         <div class="drag-handle"></div>
         <div id="user-list"></div>
-        <div class="online-footer" onclick="logout()"><span class="logout-btn">ÇIKIŞ YAP</span></div>
     </div>
 </div>
 
@@ -48,122 +52,107 @@
     const db = firebase.database();
     const adminNick = "Filiz";
 
-    // --- OTURUM YÖNETİMİ ---
-    function logout() { localStorage.removeItem("chatNick"); location.reload(); }
     let myName = localStorage.getItem("chatNick") || prompt("Nick:");
-    if(!myName) myName = "Konuk_" + Math.floor(Math.random() * 1000);
+    if(!myName) myName = "Konuk_" + Math.floor(Math.random()*99);
     localStorage.setItem("chatNick", myName);
 
-    function clearAllMessages() {
-        if(confirm("Tüm sohbet geçmişini silmek istiyor musunuz?")) {
-            db.ref('messages').remove();
-        }
+    if(myName === adminNick) {
+        document.getElementById('admin-ctrl').style.display = 'flex';
+        document.querySelectorAll('.widget').forEach(w => w.classList.add('admin-mode'));
     }
 
-    // --- WIDGET YÖNETİMİ (Sürükle-Bırak-Boyutlandır) ---
+    let isEditMode = false;
+    let draggies = [];
     const widgets = ['chat-widget', 'input-widget', 'online-widget'];
-    let isEditing = false;
+
+    function toggleEditMode() {
+        isEditMode = !isEditMode;
+        const btn = document.getElementById('edit-btn');
+        if(isEditMode) {
+            document.getElementById('main-body').classList.add('edit-mode-active');
+            btn.innerText = "DÜZENLE: AÇIK";
+            widgets.forEach(id => {
+                const d = new Draggabilly(document.getElementById(id), { containment: '.main-stage', handle: '.drag-handle' });
+                d.on('dragEnd', () => db.ref('layout/'+id).update({ x: d.position.x, y: d.position.y }));
+                draggies.push(d);
+            });
+        } else {
+            document.getElementById('main-body').classList.remove('edit-mode-active');
+            btn.innerText = "DÜZENLE: KAPALI";
+            draggies.forEach(d => d.destroy());
+            draggies = [];
+        }
+    }
 
     widgets.forEach(id => {
         const el = document.getElementById(id);
         db.ref('layout/' + id).on('value', s => {
             const p = s.val();
-            if(p && !isEditing) {
+            if(p && !isEditMode) {
                 el.style.left = p.x + "px"; el.style.top = p.y + "px";
                 el.style.width = p.w + "px"; el.style.height = p.h + "px";
             }
         });
-
-        if(myName === adminNick) {
-            el.classList.add('admin-mode');
-            if(id === 'chat-widget') document.getElementById('clear-chat').style.display = 'block';
-            
-            const draggie = new Draggabilly(el, { containment: '.main-stage', handle: '.drag-handle' });
-            draggie.on('dragStart', () => isEditing = true);
-            draggie.on('dragEnd', () => {
-                isEditing = false;
-                db.ref('layout/' + id).update({ x: draggie.position.x, y: draggie.position.y });
-            });
-
-            el.addEventListener('mouseup', () => {
-                db.ref('layout/' + id).update({ w: el.offsetWidth, h: el.offsetHeight });
-            });
-        }
+        el.addEventListener('mouseup', () => {
+            if(isEditMode) db.ref('layout/' + id).update({ w: el.offsetWidth, h: el.offsetHeight });
+        });
     });
 
-    // --- YAZI STİLLERİ ---
-    let currentFontSize = 14;
-    let isBold = false;
-    let isItalic = false;
-
-    function toggleStyle(type, btn) {
-        if(type === 'bold') {
-            isBold = !isBold;
-            btn.style.background = isBold ? "rgba(0, 242, 255, 0.4)" : "rgba(255, 255, 255, 0.1)";
-        } else if(type === 'italic') {
-            isItalic = !isItalic;
-            btn.style.background = isItalic ? "rgba(0, 242, 255, 0.4)" : "rgba(255, 255, 255, 0.1)";
-        }
+    let isBold = false, isItalic = false, fontSize = 14;
+    function toggleStyle(t) {
+        if(t==='bold') { isBold=!isBold; document.getElementById('btn-bold').classList.toggle('active-tool'); }
+        if(t==='italic') { isItalic=!isItalic; document.getElementById('btn-italic').classList.toggle('active-tool'); }
     }
+    function changeFontSize(v) { fontSize = Math.max(10, Math.min(30, fontSize + v)); }
 
-    function changeFontSize(delta) {
-        currentFontSize = Math.max(10, Math.min(30, currentFontSize + delta));
-        document.getElementById('font-size-display').innerText = currentFontSize + "px";
-    }
-
-    // --- MESAJ GÖNDERME ---
     document.getElementById('msg').addEventListener("keypress", e => {
         if(e.key === "Enter" && e.target.value.trim() !== "") {
-            const color = document.getElementById('color-picker').value;
             db.ref('messages').push().set({
-                u: myName, m: e.target.value, c: color, b: isBold, i: isItalic, s: currentFontSize
+                u: myName, m: e.target.value, c: document.getElementById('color-picker').value,
+                b: isBold, i: isItalic, s: fontSize, t: firebase.database.ServerValue.TIMESTAMP
             });
             e.target.value = "";
         }
     });
 
-    // --- MESAJ DİNLEME ---
-    const chatWin = document.getElementById('chat-window');
+    // MESAJLARI GÖSTER (YENİ ÜSTE, ESKİ ALTA)
+    const win = document.getElementById('chat-window');
     db.ref('messages').on('child_added', s => {
         const d = s.val();
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'msg';
-        msgDiv.style.color = d.c || '#ffffff';
-        msgDiv.style.fontSize = (d.s || 14) + 'px';
-        msgDiv.style.fontWeight = d.b ? 'bold' : 'normal';
-        msgDiv.style.fontStyle = d.i ? 'italic' : 'normal';
-        msgDiv.innerHTML = `<b>${d.u}:</b> ${d.m}`;
-        chatWin.appendChild(msgDiv);
-        chatWin.scrollTop = chatWin.scrollHeight;
+        const m = document.createElement('div');
+        m.className = 'msg';
+        m.style.cssText = `color:${d.c}; font-size:${d.s}px; font-weight:${d.b?'bold':'normal'}; font-style:${d.i?'italic':'normal'};`;
+        m.innerHTML = `<b>${d.u}:</b> ${d.m}`;
+        
+        // ÖNEMLİ: Başa ekleme yaparak yeni mesajı en üste alıyoruz
+        win.prepend(m);
     });
 
-    db.ref('messages').on('child_removed', () => { chatWin.innerHTML = ""; });
+    function updateMyColor(val) { if(myName) db.ref('presence/' + myName).update({ color: val }); }
 
-    // --- ONLINE TAKİBİ VE RENKLİ LİSTE ---
     db.ref('.info/connected').on('value', s => {
         if(s.val()) {
-            const ref = db.ref('presence/' + myName);
-            
-            // Renk paleti her oynandığında Firebase'i güncelle (Anlık liste rengi için)
-            document.getElementById('color-picker').oninput = function() {
-                ref.update({ color: this.value });
-            };
-
-            ref.set({ name: myName, color: document.getElementById('color-picker').value });
-            ref.onDisconnect().remove();
+            const pRef = db.ref('presence/' + myName);
+            pRef.set({ name: myName, color: document.getElementById('color-picker').value });
+            pRef.onDisconnect().remove();
         }
     });
 
     db.ref('presence').on('value', s => {
         const list = document.getElementById('user-list');
         list.innerHTML = "";
-        s.forEach(c => { 
-            const d = c.val();
-            list.innerHTML += `<div style="color: ${d.color || '#00f2ff'}">● ${d.name}</div>`; 
+        s.forEach(user => {
+            const ud = user.val();
+            const div = document.createElement('div');
+            div.style.color = ud.color || '#00f2ff';
+            div.className = 'online-user';
+            div.innerHTML = `● ${ud.name}`;
+            list.appendChild(div);
         });
     });
 
-    db.ref('settings/bg').on('value', s => { if(s.val()) document.body.style.backgroundImage = `url('${s.val()}')`; });
+    function clearAllMessages() { if(confirm("Temizlensin mi?")) db.ref('messages').remove(); }
+    db.ref('messages').on('child_removed', () => win.innerHTML = "");
 </script>
 </body>
 </html>
