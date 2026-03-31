@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Flatcast Clear Studio</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    <script src="https://unpkg.com/draggabilly@3/dist/draggabilly.pkgd.min.js"></script>
+</head>
+<body>
+
+<div class="main-stage">
+    <div class="widget" id="chat-widget">
+        <div class="drag-handle"></div>
+        <div id="clear-chat" class="clear-btn" onclick="clearAllMessages()">TEMİZLE</div>
+        <div id="chat-window"></div>
+    </div>
+    
+    <div class="widget" id="input-widget">
+        <div class="drag-handle"></div>
+        <input type="text" id="msg" placeholder="Mesaj yaz..." autocomplete="off">
+    </div>
+
+    <div class="widget" id="online-widget">
+        <div class="drag-handle"></div>
+        <div id="user-list"></div>
+        <div class="online-footer" onclick="logout()"><span class="logout-btn">ÇIKIŞ YAP</span></div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyBeMsSLTbpmjzd7HrVKjhFIVAQ_goJsLUg",
+        authDomain: "flat-chat-fa830.firebaseapp.com",
+        databaseURL: "https://flat-chat-fa830-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "flat-chat-fa830",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const adminNick = "Filiz";
+
+    function logout() { localStorage.removeItem("chatNick"); location.reload(); }
+    let myName = localStorage.getItem("chatNick") || prompt("Nick:");
+    localStorage.setItem("chatNick", myName || "Konuk");
+
+    // SOHBET TEMİZLEME FONKSİYONU
+    function clearAllMessages() {
+        if(confirm("Tüm sohbet geçmişini silmek istiyor musunuz?")) {
+            db.ref('messages').remove();
+        }
+    }
+
+    const widgets = ['chat-widget', 'input-widget', 'online-widget'];
+    let isEditing = false;
+
+    widgets.forEach(id => {
+        const el = document.getElementById(id);
+        db.ref('layout/' + id).on('value', s => {
+            const p = s.val();
+            if(p && !isEditing) {
+                el.style.left = p.x + "px"; el.style.top = p.y + "px";
+                el.style.width = p.w + "px"; el.style.height = p.h + "px";
+            }
+        });
+
+        if(myName === adminNick) {
+            el.classList.add('admin-mode');
+            document.getElementById('clear-chat').style.display = 'block'; // Butonu göster
+            
+            const draggie = new Draggabilly(el, { containment: '.main-stage', handle: '.drag-handle' });
+            draggie.on('dragStart', () => { isEditing = true; });
+            draggie.on('dragEnd', () => {
+                isEditing = false;
+                db.ref('layout/' + id).update({ x: draggie.position.x, y: draggie.position.y });
+            });
+
+            el.addEventListener('mouseup', () => {
+                if(myName === adminNick) {
+                    db.ref('layout/' + id).update({ w: el.offsetWidth, h: el.offsetHeight });
+                }
+            });
+        }
+    });
+
+    // Mesaj Gönderme
+    document.getElementById('msg').addEventListener("keypress", e => {
+        if(e.key === "Enter" && e.target.value.trim() !== "") {
+            db.ref('messages').push().set({ u: myName, m: e.target.value });
+            e.target.value = "";
+        }
+    });
+
+    // Mesajları Dinle (Silinince ekrandan da kalkar)
+    db.ref('messages').on('value', s => {
+        const win = document.getElementById('chat-window');
+        win.innerHTML = ""; // Önce ekranı boşalt
+        s.forEach(child => {
+            const d = child.val();
+            win.innerHTML += `<div class="msg"><b>${d.u}:</b> ${d.m}</div>`;
+        });
+        win.scrollTop = win.scrollHeight;
+    });
+
+    // Online Takibi
+    db.ref('.info/connected').on('value', s => {
+        if(s.val()) {
+            const ref = db.ref('presence/' + myName);
+            ref.set({ name: myName });
+            ref.onDisconnect().remove();
+        }
+    });
+
+    db.ref('presence').on('value', s => {
+        const list = document.getElementById('user-list');
+        list.innerHTML = "";
+        s.forEach(c => { list.innerHTML += `<div>● ${c.val().name}</div>`; });
+    });
+
+    db.ref('settings/bg').on('value', s => { if(s.val()) document.body.style.backgroundImage = `url('${s.val()}')`; });
+</script>
+</body>
+</html>
