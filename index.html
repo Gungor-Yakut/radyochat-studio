@@ -19,6 +19,14 @@
     
     <div class="widget" id="input-widget">
         <div class="drag-handle"></div>
+        <div class="style-toolbar">
+            <input type="color" id="color-picker" value="#00f2ff">
+            <button onclick="toggleStyle('bold', this)"><b>B</b></button>
+            <button onclick="toggleStyle('italic', this)"><i>I</i></button>
+            <button onclick="changeFontSize(1)">+</button>
+            <button onclick="changeFontSize(-1)">-</button>
+            <span id="font-size-display">14px</span>
+        </div>
         <input type="text" id="msg" placeholder="Mesaj yaz..." autocomplete="off">
     </div>
 
@@ -42,9 +50,9 @@
 
     function logout() { localStorage.removeItem("chatNick"); location.reload(); }
     let myName = localStorage.getItem("chatNick") || prompt("Nick:");
-    localStorage.setItem("chatNick", myName || "Konuk");
+    if(!myName) myName = "Konuk_" + Math.floor(Math.random() * 1000);
+    localStorage.setItem("chatNick", myName);
 
-    // SOHBET TEMİZLEME FONKSİYONU
     function clearAllMessages() {
         if(confirm("Tüm sohbet geçmişini silmek istiyor musunuz?")) {
             db.ref('messages').remove();
@@ -56,6 +64,8 @@
 
     widgets.forEach(id => {
         const el = document.getElementById(id);
+        
+        // Veritabanından Konum ve Boyut Çekme
         db.ref('layout/' + id).on('value', s => {
             const p = s.val();
             if(p && !isEditing) {
@@ -66,56 +76,99 @@
 
         if(myName === adminNick) {
             el.classList.add('admin-mode');
-            document.getElementById('clear-chat').style.display = 'block'; // Butonu göster
+            if(id === 'chat-widget') document.getElementById('clear-chat').style.display = 'block';
             
+            // Sürükleme Özelliği (Handle ile)
             const draggie = new Draggabilly(el, { containment: '.main-stage', handle: '.drag-handle' });
-            draggie.on('dragStart', () => { isEditing = true; });
+            
+            draggie.on('dragStart', () => isEditing = true);
             draggie.on('dragEnd', () => {
                 isEditing = false;
                 db.ref('layout/' + id).update({ x: draggie.position.x, y: draggie.position.y });
             });
 
+            // Boyut Değiştirme (Mouse Bırakıldığında Kaydet)
             el.addEventListener('mouseup', () => {
-                if(myName === adminNick) {
-                    db.ref('layout/' + id).update({ w: el.offsetWidth, h: el.offsetHeight });
-                }
+                db.ref('layout/' + id).update({ w: el.offsetWidth, h: el.offsetHeight });
             });
         }
     });
 
-    // Mesaj Gönderme
+    let currentFontSize = 14;
+    let isBold = false;
+    let isItalic = false;
+
+    function toggleStyle(type, btn) {
+        if(type === 'bold') {
+            isBold = !isBold;
+            btn.style.background = isBold ? "rgba(0, 242, 255, 0.4)" : "rgba(255, 255, 255, 0.1)";
+        } else if(type === 'italic') {
+            isItalic = !isItalic;
+            btn.style.background = isItalic ? "rgba(0, 242, 255, 0.4)" : "rgba(255, 255, 255, 0.1)";
+        }
+    }
+
+    function changeFontSize(delta) {
+        currentFontSize = Math.max(10, Math.min(30, currentFontSize + delta));
+        document.getElementById('font-size-display').innerText = currentFontSize + "px";
+    }
+
     document.getElementById('msg').addEventListener("keypress", e => {
         if(e.key === "Enter" && e.target.value.trim() !== "") {
-            db.ref('messages').push().set({ u: myName, m: e.target.value });
+            const color = document.getElementById('color-picker').value;
+            db.ref('messages').push().set({
+                u: myName, m: e.target.value, c: color, b: isBold, i: isItalic, s: currentFontSize
+            });
             e.target.value = "";
         }
     });
 
-    // Mesajları Dinle (Silinince ekrandan da kalkar)
-    db.ref('messages').on('value', s => {
-        const win = document.getElementById('chat-window');
-        win.innerHTML = ""; // Önce ekranı boşalt
-        s.forEach(child => {
-            const d = child.val();
-            win.innerHTML += `<div class="msg"><b>${d.u}:</b> ${d.m}</div>`;
+    const chatWin = document.getElementById('chat-window');
+    db.ref('messages').on('child_added', s => {
+        const d = s.val();
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'msg';
+        msgDiv.style.color = d.c || '#ffffff';
+        msgDiv.style.fontSize = (d.s || 14) + 'px';
+        msgDiv.style.fontWeight = d.b ? 'bold' : 'normal';
+        msgDiv.style.fontStyle = d.i ? 'italic' : 'normal';
+        msgDiv.innerHTML = `<b>${d.u}:</b> ${d.m}`;
+        chatWin.appendChild(msgDiv);
+        chatWin.scrollTop = chatWin.scrollHeight;
+    });
+
+    db.ref('messages').on('child_removed', () => { chatWin.innerHTML = ""; });
+
+    // --- ONLINE TAKİBİ (RENK DESTEĞİ İLE) ---
+db.ref('.info/connected').on('value', s => {
+    if(s.val()) {
+        const ref = db.ref('presence/' + myName);
+        
+        // Renk seçiciden her renk değiştiğinde Firebase'deki rengini de güncelle
+        document.getElementById('color-picker').oninput = function() {
+            ref.update({ color: this.value });
+        };
+
+        // İlk girişte mevcut rengi kaydet
+        ref.set({ 
+            name: myName, 
+            color: document.getElementById('color-picker').value 
         });
-        win.scrollTop = win.scrollHeight;
-    });
+        ref.onDisconnect().remove();
+    }
+});
 
-    // Online Takibi
-    db.ref('.info/connected').on('value', s => {
-        if(s.val()) {
-            const ref = db.ref('presence/' + myName);
-            ref.set({ name: myName });
-            ref.onDisconnect().remove();
-        }
+// --- KULLANICI LİSTESİNİ GÖRÜNTÜLE ---
+db.ref('presence').on('value', s => {
+    const list = document.getElementById('user-list');
+    list.innerHTML = "";
+    s.forEach(c => { 
+        const d = c.val();
+        // Burada rengi d.color üzerinden alıyoruz
+        const userColor = d.color || '#00f2ff';
+        list.innerHTML += `<div style="color: ${userColor}; margin-bottom: 5px; font-weight: bold;">● ${d.name}</div>`; 
     });
-
-    db.ref('presence').on('value', s => {
-        const list = document.getElementById('user-list');
-        list.innerHTML = "";
-        s.forEach(c => { list.innerHTML += `<div>● ${c.val().name}</div>`; });
-    });
+});
 
     db.ref('settings/bg').on('value', s => { if(s.val()) document.body.style.backgroundImage = `url('${s.val()}')`; });
 </script>
