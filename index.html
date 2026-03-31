@@ -2,8 +2,8 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Flatcast Clear Studio</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Filiz Yeşili FM - Studio</title>
+    <link rel="stylesheet" href="style.css?v=1.2">
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/draggabilly@3/dist/draggabilly.pkgd.min.js"></script>
@@ -20,11 +20,11 @@
     <div class="widget" id="input-widget">
         <div class="drag-handle"></div>
         <div class="style-toolbar">
-            <input type="color" id="color-picker" value="#00f2ff">
-            <button onclick="toggleStyle('bold', this)"><b>B</b></button>
-            <button onclick="toggleStyle('italic', this)"><i>I</i></button>
-            <button onclick="changeFontSize(1)">+</button>
-            <button onclick="changeFontSize(-1)">-</button>
+            <input type="color" id="color-picker" value="#00f2ff" title="Rengini Seç">
+            <button type="button" onclick="toggleStyle('bold', this)" title="Kalın"><b>B</b></button>
+            <button type="button" onclick="toggleStyle('italic', this)" title="İtalik"><i>I</i></button>
+            <button type="button" onclick="changeFontSize(1)" title="Büyüt">+</button>
+            <button type="button" onclick="changeFontSize(-1)" title="Küçült">-</button>
             <span id="font-size-display">14px</span>
         </div>
         <input type="text" id="msg" placeholder="Mesaj yaz..." autocomplete="off">
@@ -48,6 +48,7 @@
     const db = firebase.database();
     const adminNick = "Filiz";
 
+    // --- OTURUM YÖNETİMİ ---
     function logout() { localStorage.removeItem("chatNick"); location.reload(); }
     let myName = localStorage.getItem("chatNick") || prompt("Nick:");
     if(!myName) myName = "Konuk_" + Math.floor(Math.random() * 1000);
@@ -59,13 +60,12 @@
         }
     }
 
+    // --- WIDGET YÖNETİMİ (Sürükle-Bırak-Boyutlandır) ---
     const widgets = ['chat-widget', 'input-widget', 'online-widget'];
     let isEditing = false;
 
     widgets.forEach(id => {
         const el = document.getElementById(id);
-        
-        // Veritabanından Konum ve Boyut Çekme
         db.ref('layout/' + id).on('value', s => {
             const p = s.val();
             if(p && !isEditing) {
@@ -78,22 +78,20 @@
             el.classList.add('admin-mode');
             if(id === 'chat-widget') document.getElementById('clear-chat').style.display = 'block';
             
-            // Sürükleme Özelliği (Handle ile)
             const draggie = new Draggabilly(el, { containment: '.main-stage', handle: '.drag-handle' });
-            
             draggie.on('dragStart', () => isEditing = true);
             draggie.on('dragEnd', () => {
                 isEditing = false;
                 db.ref('layout/' + id).update({ x: draggie.position.x, y: draggie.position.y });
             });
 
-            // Boyut Değiştirme (Mouse Bırakıldığında Kaydet)
             el.addEventListener('mouseup', () => {
                 db.ref('layout/' + id).update({ w: el.offsetWidth, h: el.offsetHeight });
             });
         }
     });
 
+    // --- YAZI STİLLERİ ---
     let currentFontSize = 14;
     let isBold = false;
     let isItalic = false;
@@ -113,6 +111,7 @@
         document.getElementById('font-size-display').innerText = currentFontSize + "px";
     }
 
+    // --- MESAJ GÖNDERME ---
     document.getElementById('msg').addEventListener("keypress", e => {
         if(e.key === "Enter" && e.target.value.trim() !== "") {
             const color = document.getElementById('color-picker').value;
@@ -123,6 +122,7 @@
         }
     });
 
+    // --- MESAJ DİNLEME ---
     const chatWin = document.getElementById('chat-window');
     db.ref('messages').on('child_added', s => {
         const d = s.val();
@@ -139,36 +139,29 @@
 
     db.ref('messages').on('child_removed', () => { chatWin.innerHTML = ""; });
 
-    // --- ONLINE TAKİBİ (RENK DESTEĞİ İLE) ---
-db.ref('.info/connected').on('value', s => {
-    if(s.val()) {
-        const ref = db.ref('presence/' + myName);
-        
-        // Renk seçiciden her renk değiştiğinde Firebase'deki rengini de güncelle
-        document.getElementById('color-picker').oninput = function() {
-            ref.update({ color: this.value });
-        };
+    // --- ONLINE TAKİBİ VE RENKLİ LİSTE ---
+    db.ref('.info/connected').on('value', s => {
+        if(s.val()) {
+            const ref = db.ref('presence/' + myName);
+            
+            // Renk paleti her oynandığında Firebase'i güncelle (Anlık liste rengi için)
+            document.getElementById('color-picker').oninput = function() {
+                ref.update({ color: this.value });
+            };
 
-        // İlk girişte mevcut rengi kaydet
-        ref.set({ 
-            name: myName, 
-            color: document.getElementById('color-picker').value 
-        });
-        ref.onDisconnect().remove();
-    }
-});
-
-// --- KULLANICI LİSTESİNİ GÖRÜNTÜLE ---
-db.ref('presence').on('value', s => {
-    const list = document.getElementById('user-list');
-    list.innerHTML = "";
-    s.forEach(c => { 
-        const d = c.val();
-        // Burada rengi d.color üzerinden alıyoruz
-        const userColor = d.color || '#00f2ff';
-        list.innerHTML += `<div style="color: ${userColor}; margin-bottom: 5px; font-weight: bold;">● ${d.name}</div>`; 
+            ref.set({ name: myName, color: document.getElementById('color-picker').value });
+            ref.onDisconnect().remove();
+        }
     });
-});
+
+    db.ref('presence').on('value', s => {
+        const list = document.getElementById('user-list');
+        list.innerHTML = "";
+        s.forEach(c => { 
+            const d = c.val();
+            list.innerHTML += `<div style="color: ${d.color || '#00f2ff'}">● ${d.name}</div>`; 
+        });
+    });
 
     db.ref('settings/bg').on('value', s => { if(s.val()) document.body.style.backgroundImage = `url('${s.val()}')`; });
 </script>

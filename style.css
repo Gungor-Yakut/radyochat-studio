@@ -23,7 +23,7 @@ body {
 /* Admin Modu ve Resize (Büyütme/Küçültme) */
 .admin-mode { 
     border: 1px solid rgba(0, 242, 255, 0.3) !important; 
-    resize: both !important; /* Sağ alttaki tutamaç */
+    resize: both !important; 
     overflow: hidden !important; 
 }
 
@@ -36,17 +36,14 @@ body {
 }
 #chat-window::-webkit-scrollbar, #user-list::-webkit-scrollbar { display: none !important; }
 
+/* Sürükleme Tutamacı */
 .drag-handle { 
     width: 100%; 
-    height: 25px; /* Tutamaç biraz daha belirgin yapıldı */
+    height: 25px; 
     background: rgba(255,255,255,0.05); 
     cursor: move; 
     flex-shrink: 0;
 }
-
-/* İçerikler */
-#chat-window { padding: 10px; color: #fff; }
-#user-list { padding: 10px; color: #00f2ff; font-size: 13px; }
 
 /* Stil Araç Çubuğu */
 .style-toolbar {
@@ -54,12 +51,19 @@ body {
     background: rgba(255, 255, 255, 0.05);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     align-items: center; flex-shrink: 0;
+    min-height: 40px;
 }
 .style-toolbar button {
     background: rgba(255, 255, 255, 0.1); border: none; color: white;
-    cursor: pointer; border-radius: 4px; padding: 3px 10px; font-size: 13px;
+    cursor: pointer; border-radius: 4px; padding: 4px 10px; font-size: 13px;
+    line-height: 1; transition: 0.2s;
 }
-#color-picker { border: none; width: 24px; height: 24px; cursor: pointer; background: transparent; padding: 0; }
+.style-toolbar button:hover { background: rgba(0, 242, 255, 0.2); }
+
+#color-picker { 
+    border: none; width: 28px; height: 28px; cursor: pointer; 
+    background: transparent; padding: 0; flex-shrink: 0;
+}
 #font-size-display { color: #00f2ff; font-size: 11px; margin-left: auto; font-weight: bold; }
 
 /* Mesaj Yazma Alanı */
@@ -68,6 +72,7 @@ input#msg {
     padding: 12px 15px; width: 100%; outline: none; font-size: 14px; box-sizing: border-box;
 }
 
+/* Admin Temizle Butonu */
 .clear-btn {
     position: absolute; top: 5px; right: 10px;
     background: rgba(255, 0, 0, 0.4); color: white;
@@ -78,15 +83,15 @@ input#msg {
 .online-footer { height: 32px; background: rgba(255, 0, 0, 0.1); text-align: center; line-height: 32px; flex-shrink: 0; }
 .logout-btn { color: #ff4b2b; font-size: 11px; font-weight: bold; cursor: pointer; }
 
+/* Mesaj Balonu */
 .msg { 
     background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px; 
     margin-bottom: 6px; border-left: 3px solid rgba(0, 242, 255, 0.5); word-wrap: break-word;
 }
 
+/* Online Listesi Satırları */
 #user-list div {
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.02);
-    margin-bottom: 3px;
-    transition: color 0.3s ease; /* Renk geçişi yumuşak olsun */
+    padding: 4px 8px; border-radius: 4px;
+    background: rgba(255, 255, 255, 0.02); margin-bottom: 3px;
+    font-weight: bold;
 }
