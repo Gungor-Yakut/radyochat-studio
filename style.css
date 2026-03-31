@@ -1,9 +1,15 @@
 /* GENEL AYARLAR */
 body {
-    margin: 0; width: 100vw; height: 100vh;
-    background: #0f0f13 no-repeat center center fixed;
-    background-size: cover; font-family: 'Segoe UI', sans-serif;
-    display: flex; justify-content: center; align-items: center;
+    margin: 0; 
+    width: 100vw; 
+    height: 100vh;
+    /* background-color kısmını sildik, sadece resim çekecek */
+    background-position: center;
+    background-size: cover;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
     overflow: hidden;
 }
 
