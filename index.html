@@ -2,17 +2,21 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Filiz Yeşili FM - Dynamic Studio</title>
-    <link rel="stylesheet" href="style.css?v=7.0">
+    <title>Filiz Yeşili FM - Şeffaf Studio</title>
+    <link rel="stylesheet" href="style.css?v=10.0">
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/draggabilly@3/dist/draggabilly.pkgd.min.js"></script>
+    <style>
+        /* Blogger Iframe içinde şeffaflığı garantiye almak için ek CSS */
+        html, body { background: transparent !important; }
+    </style>
 </head>
 <body id="main-body">
 
 <div id="admin-ctrl">
     <div class="admin-btn" onclick="toggleEditMode()" id="edit-btn">DÜZENLE: KAPALI</div>
-    <div class="admin-btn" style="border-color:#ff4b2b; color:#ff4b2b;" onclick="clearAllMessages()">TEMİZLE</div>
+    <div class="admin-btn" style="border-color:#ff4b2b; color:#ff4b2b;" onclick="clearAllMessages()">SOHBETİ TEMİZLE</div>
 </div>
 
 <div class="main-stage">
@@ -25,13 +29,13 @@
         <div class="drag-handle"></div>
         <div class="input-container">
             <div class="mini-tools">
-                <input type="color" id="color-picker" value="#00f2ff" oninput="updateMyColor(this.value)">
-                <button id="btn-bold" onclick="toggleStyle('bold')">B</button>
-                <button id="btn-italic" onclick="toggleStyle('italic')">I</button>
-                <button onclick="changeFontSize(2)">+</button>
-                <button onclick="changeFontSize(-2)">-</button>
+                <input type="color" id="color-picker" value="#00f2ff" oninput="updateMyColor(this.value)" title="Renk Seç">
+                <button id="btn-bold" onclick="toggleStyle('bold')" title="Kalın">B</button>
+                <button id="btn-italic" onclick="toggleStyle('italic')" title="İtalik">I</button>
+                <button onclick="changeFontSize(2)" title="Büyüt">+</button>
+                <button onclick="changeFontSize(-2)" title="Küçült">-</button>
             </div>
-            <input type="text" id="msg" placeholder="Mesaj yaz..." autocomplete="off">
+            <input type="text" id="msg" placeholder="Mesajınızı buraya yazın..." autocomplete="off">
         </div>
     </div>
 
@@ -42,6 +46,7 @@
 </div>
 
 <script>
+    // Firebase Yapılandırması
     const firebaseConfig = {
         apiKey: "AIzaSyBeMsSLTbpmjzd7HrVKjhFIVAQ_goJsLUg",
         authDomain: "flat-chat-fa830.firebaseapp.com",
@@ -52,24 +57,28 @@
     const db = firebase.database();
     const adminNick = "Filiz";
 
-    let myName = localStorage.getItem("chatNick") || prompt("Nick:");
-    if(!myName) myName = "Konuk_" + Math.floor(Math.random()*99);
+    // Kullanıcı Girişi
+    let myName = localStorage.getItem("chatNick") || prompt("Radyo Nickiniz:");
+    if(!myName) myName = "Misafir_" + Math.floor(Math.random()*99);
     localStorage.setItem("chatNick", myName);
 
+    // Admin Yetkisi
     if(myName === adminNick) {
         document.getElementById('admin-ctrl').style.display = 'flex';
         document.querySelectorAll('.widget').forEach(w => w.classList.add('admin-mode'));
     }
 
+    // Düzenleme Modu Değişkenleri
     let isEditMode = false;
     let draggies = [];
     const widgets = ['chat-widget', 'input-widget', 'online-widget'];
 
     function toggleEditMode() {
         isEditMode = !isEditMode;
+        const body = document.getElementById('main-body');
         const btn = document.getElementById('edit-btn');
         if(isEditMode) {
-            document.getElementById('main-body').classList.add('edit-mode-active');
+            body.classList.add('edit-mode-active');
             btn.innerText = "DÜZENLE: AÇIK";
             widgets.forEach(id => {
                 const d = new Draggabilly(document.getElementById(id), { containment: '.main-stage', handle: '.drag-handle' });
@@ -77,13 +86,14 @@
                 draggies.push(d);
             });
         } else {
-            document.getElementById('main-body').classList.remove('edit-mode-active');
+            body.classList.remove('edit-mode-active');
             btn.innerText = "DÜZENLE: KAPALI";
             draggies.forEach(d => d.destroy());
             draggies = [];
         }
     }
 
+    // Konum ve Boyut Senkronizasyonu
     widgets.forEach(id => {
         const el = document.getElementById(id);
         db.ref('layout/' + id).on('value', s => {
@@ -98,13 +108,15 @@
         });
     });
 
+    // Yazı Stilleri
     let isBold = false, isItalic = false, fontSize = 14;
     function toggleStyle(t) {
         if(t==='bold') { isBold=!isBold; document.getElementById('btn-bold').classList.toggle('active-tool'); }
         if(t==='italic') { isItalic=!isItalic; document.getElementById('btn-italic').classList.toggle('active-tool'); }
     }
-    function changeFontSize(v) { fontSize = Math.max(10, Math.min(30, fontSize + v)); }
+    function changeFontSize(v) { fontSize = Math.max(10, Math.min(32, fontSize + v)); }
 
+    // Mesaj Gönderme
     document.getElementById('msg').addEventListener("keypress", e => {
         if(e.key === "Enter" && e.target.value.trim() !== "") {
             db.ref('messages').push().set({
@@ -115,7 +127,7 @@
         }
     });
 
-    // MESAJLARI GÖSTER (YENİ ÜSTE, ESKİ ALTA)
+    // Mesajları Dinle (Yeni Üste, Eski Alta Kayar)
     const win = document.getElementById('chat-window');
     db.ref('messages').on('child_added', s => {
         const d = s.val();
@@ -124,11 +136,14 @@
         m.style.cssText = `color:${d.c}; font-size:${d.s}px; font-weight:${d.b?'bold':'normal'}; font-style:${d.i?'italic':'normal'};`;
         m.innerHTML = `<b>${d.u}:</b> ${d.m}`;
         
-        // ÖNEMLİ: Başa ekleme yaparak yeni mesajı en üste alıyoruz
+        // prepend kullanarak yeni mesajı en tepeye ekliyoruz
         win.prepend(m);
     });
 
-    function updateMyColor(val) { if(myName) db.ref('presence/' + myName).update({ color: val }); }
+    // Online Takibi ve Renk Senkronizasyonu
+    function updateMyColor(val) {
+        if(myName) db.ref('presence/' + myName).update({ color: val });
+    }
 
     db.ref('.info/connected').on('value', s => {
         if(s.val()) {
@@ -144,14 +159,15 @@
         s.forEach(user => {
             const ud = user.val();
             const div = document.createElement('div');
-            div.style.color = ud.color || '#00f2ff';
             div.className = 'online-user';
+            div.style.color = ud.color || '#00f2ff';
             div.innerHTML = `● ${ud.name}`;
             list.appendChild(div);
         });
     });
 
-    function clearAllMessages() { if(confirm("Temizlensin mi?")) db.ref('messages').remove(); }
+    // Sohbeti Temizle (Admin)
+    function clearAllMessages() { if(confirm("Tüm mesajlar silinecek. Emin misiniz?")) db.ref('messages').remove(); }
     db.ref('messages').on('child_removed', () => win.innerHTML = "");
 </script>
 </body>
