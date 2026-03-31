@@ -1,53 +1,110 @@
-/* GENEL AYARLAR: ARKA PLANI TAMAMEN SİL */
+/* GENEL AYARLAR: TAM ŞEFFAFLIK */
 body {
-    margin: 0; 
-    width: 100vw; 
-    height: 100vh;
-    background: transparent !important; /* Arka plan rengini ve resmini tamamen öldürür */
-    font-family: 'Segoe UI', sans-serif;
-    display: flex; 
-    justify-content: center; 
-    align-items: center;
+    margin: 0; width: 100vw; height: 100vh;
+    background: transparent !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex; justify-content: center; align-items: center;
     overflow: hidden;
 }
 
 .main-stage { position: relative; width: 1200px; height: 700px; background: transparent; }
 
-/* WIDGET YAPISI: CAM EFEKTİNİ SIFIRLA */
+/* WIDGET YAPISI */
 .widget {
     position: absolute;
-    background: transparent; /* Widget arkasındaki o hafif beyazlığı siler */
-    backdrop-filter: none;    /* Bulanıklığı kaldırır, arkadaki DJ teması netleşir */
+    background: rgba(255, 255, 255, 0.01);
     border-radius: 10px;
     z-index: 10;
     display: flex;
     flex-direction: column;
+    box-sizing: border-box;
+    transition: background 0.3s;
 }
 
-/* SADECE DÜZENLEME MODUNDA ÇERÇEVE GÖRÜNSÜN */
+/* DÜZENLEME MODU AKTİFKEN */
 .edit-mode-active .widget {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px dashed rgba(0, 242, 255, 0.5) !important;
+    background: rgba(0, 242, 255, 0.1) !important;
+    border: 1.5px dashed #00f2ff !important;
+    resize: both !important; /* Sağ alttan büyütme aktif */
+    overflow: auto !important;
+}
+
+/* TAŞIMA TUTAMACI (ÜSTTEKİ İNCE ÇUBUK) */
+.drag-handle { 
+    width: 100%; height: 15px; background: transparent; 
+    flex-shrink: 0; cursor: default;
+}
+.edit-mode-active .drag-handle { 
+    background: rgba(0, 242, 255, 0.4); 
+    cursor: move !important; 
 }
 
 /* MESAJ YAZMA ALANI */
+#input-widget { 
+    height: auto !important; min-height: 50px; 
+    background: rgba(0, 0, 0, 0.5) !important;
+    border-radius: 12px;
+}
+
 .input-container {
-    display: flex; 
-    align-items: center; 
-    gap: 8px;
-    padding: 5px 10px; 
-    background: rgba(0, 0, 0, 0.2); /* Sadece yazarken kutuyu hafif belli eder */
-    border-radius: 10px;
+    display: flex; align-items: center; width: 100%;
+    padding: 5px 15px; box-sizing: border-box;
 }
 
-/* YAZILARIN OKUNABİLİRLİĞİ İÇİN GÖLGE EKLEDİM */
-.msg, .online-user {
-    background: transparent;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8); /* Arka plan karışık olsa bile yazılar okunur */
-    font-weight: 500;
+input#msg {
+    flex: 1; background: transparent; border: none !important;
+    color: #fff; outline: none; font-size: 15px; padding: 10px;
 }
 
-/* DİĞER TÜM ARKA PLANLARI SIFIRLA */
-#chat-window, #user-list, .drag-handle {
-    background: transparent !important;
+/* ARAÇLAR (B, I, +, -) */
+.mini-tools { 
+    display: flex; gap: 8px; align-items: center; 
+    border-right: 1px solid rgba(255,255,255,0.2); 
+    padding-right: 12px; margin-right: 5px;
+}
+
+/* AKTİF BUTON PARLAMASI */
+.mini-tools button {
+    background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: #00f2ff; width: 30px; height: 30px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; font-weight: bold;
+    transition: 0.2s;
+}
+.mini-tools button.active-tool {
+    background: #00f2ff !important; color: #000 !important;
+    box-shadow: 0 0 10px #00f2ff;
+}
+
+#color-picker {
+    -webkit-appearance: none; width: 26px; height: 26px;
+    background: transparent; border: none; cursor: pointer; padding: 0;
+}
+#color-picker::-webkit-color-swatch { border: 2px solid #fff; border-radius: 50%; }
+
+/* SOHBET AKIŞI VE MESAJLAR */
+#chat-window { 
+    flex: 1; overflow-y: auto; padding: 15px; 
+    display: flex; flex-direction: column; 
+    scrollbar-width: none;
+}
+#chat-window::-webkit-scrollbar { display: none; }
+
+.msg { 
+    color: #fff; margin-bottom: 6px; 
+    text-shadow: 1px 1px 3px #000; 
+    animation: slideIn 0.3s ease;
+    word-wrap: break-word;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ADMİN BUTONLARI */
+#admin-ctrl { position: fixed; top: 20px; left: 20px; z-index: 9999; display: none; gap: 10px; }
+.admin-btn {
+    background: rgba(0, 0, 0, 0.8); border: 1px solid #00f2ff;
+    color: #00f2ff; padding: 10px 20px; border-radius: 5px;
+    cursor: pointer; font-size: 12px; font-weight: bold; backdrop-filter: blur(5px);
 }
