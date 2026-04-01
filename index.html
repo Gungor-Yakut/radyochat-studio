@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Filiz Yeşili FM - Pro Studio</title>
+    <title>Filiz Yeşili FM - Studio</title>
     <link rel="stylesheet" href="style.css"> 
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
@@ -10,7 +10,7 @@
 </head>
 <body id="main-body">
 
-<div id="toast">YERLEŞİM KAYDEDİLDİ</div>
+<div id="toast">GÜNCEL YERLEŞİM KAYDEDİLDİ</div>
 
 <div id="admin-ctrl">
     <button class="admin-btn" onclick="toggleEditMode()" id="edit-btn">DÜZENLEME MODU</button>
@@ -20,42 +20,27 @@
 <div id="login-modal">
     <div class="login-box">
         <h3 style="color:#00f2ff;">PANEL GİRİŞİ</h3>
-        <input type="text" id="nick-input" placeholder="Nick yazın..." autocomplete="off">
+        <input type="text" id="nick-input" placeholder="Nickinizi yazın...">
         <button onclick="login()" style="width:100%; padding:12px; background:#00f2ff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">GİRİŞ YAP</button>
         <p onclick="hideLogin()" style="color:#666; margin-top:10px; cursor:pointer; font-size:12px;">Kapat</p>
     </div>
 </div>
 
-<div class="main-stage">
-    <div class="widget" id="login-widget" style="width:140px; height:50px;" onclick="showLogin()">
-        <div class="drag-handle"></div><span id="login-text" style="color:#00f2ff; font-weight:bold;">GİRİŞ YAP</span>
-    </div>
-
-    <div class="widget is-locked" id="chat-widget" style="width:400px; height:400px;">
-        <div class="drag-handle"></div><div id="chat-window"></div>
-    </div>
-
-    <div class="widget" id="tools-widget" style="width:240px; height:70px;">
+<div class="main-stage" style="position: relative; width: 100%; height: 100vh;">
+    <div class="widget" id="login-widget" onclick="showLogin()"><div class="drag-handle"></div><span id="login-text" style="color:#00f2ff; font-weight:bold; text-align:center; padding: 10px; display:block;">GİRİŞ YAP</span></div>
+    <div class="widget is-locked" id="chat-widget"><div class="drag-handle"></div><div id="chat-window"></div></div>
+    <div class="widget" id="tools-widget">
         <div class="drag-handle"></div>
         <div class="mini-tools">
             <input type="color" id="color-picker" value="#00f2ff" oninput="saveSettings()">
             <button id="btn-bold" onclick="toggleStyle('bold')">B</button>
             <button id="btn-italic" onclick="toggleStyle('italic')">I</button>
-            <button onclick="changeFontSize(2)">A+</button>
-            <button onclick="changeFontSize(-2)">A-</button>
+            <button onclick="changeFontSize(2)">+</button>
+            <button onclick="changeFontSize(-2)">-</button>
         </div>
     </div>
-    
-    <div class="widget" id="input-widget" style="width:400px; height:65px;">
-        <div class="drag-handle"></div>
-        <div class="input-flex">
-            <input type="text" id="msg" placeholder="Giriş bekleniyor..." disabled autocomplete="off">
-        </div>
-    </div>
-
-    <div class="widget" id="online-widget" style="width:200px; height:540px;">
-        <div class="drag-handle"></div><div id="user-list" style="padding:12px;"></div>
-    </div>
+    <div class="widget" id="input-widget"><div class="drag-handle"></div><div class="input-flex"><input type="text" id="msg" placeholder="Lütfen giriş yapın..." disabled autocomplete="off"></div></div>
+    <div class="widget" id="online-widget"><div class="drag-handle"></div><div id="user-list" style="padding:10px;"></div></div>
 </div>
 
 <script>
@@ -70,32 +55,25 @@
     const adminNick = "Filiz";
 
     let myName = localStorage.getItem("filiz_chat_nick") || "";
-    let isVerified = false, isEditMode = false;
+    let isVerified = false, isEditMode = false, draggies = [];
     let isBold = false, isItalic = false, fontSize = 14;
-    let draggies = [];
     const widgetIds = ['chat-widget', 'input-widget', 'online-widget', 'login-widget', 'tools-widget'];
 
     window.onload = () => {
         if(myName) {
             if(myName === adminNick) document.getElementById('admin-ctrl').style.display = 'flex';
             startAuth();
-        } else {
-            let tempNick = "Misafir_" + Math.floor(Math.random() * 999);
-            const pRef = db.ref('presence/' + tempNick);
-            pRef.set({ name: tempNick, color: "#888", isVerified: false });
-            pRef.onDisconnect().remove();
         }
     };
 
     function showLogin() { if(!isEditMode) document.getElementById('login-modal').style.display = 'flex'; }
     function hideLogin() { document.getElementById('login-modal').style.display = 'none'; }
-
     function login() {
         const val = document.getElementById('nick-input').value.trim();
         if(!val) return;
         localStorage.setItem("filiz_chat_nick", val);
         myName = val;
-        location.reload(); 
+        location.reload();
     }
 
     function startAuth() {
@@ -109,12 +87,12 @@
 
             if (isVerified) {
                 chatBox.classList.remove('is-locked');
-                msgInp.disabled = false; msgInp.placeholder = "Mesaj yazın...";
+                msgInp.disabled = false; msgInp.placeholder = "Mesajınızı yazın...";
                 logBtn.innerText = myName.toUpperCase();
             } else {
                 chatBox.classList.add('is-locked');
                 msgInp.disabled = true; msgInp.placeholder = "Onay bekleniyor...";
-                logBtn.innerText = "ONAY BEKLENİYOR";
+                logBtn.innerText = "BEKLEMEDE";
             }
             uRef.set({ name: myName, color: data.color || "#00f2ff", isVerified: isVerified });
             uRef.onDisconnect().remove();
@@ -126,7 +104,6 @@
         if(t==='italic') { isItalic=!isItalic; document.getElementById('btn-italic').classList.toggle('active-tool'); }
     }
     function changeFontSize(v) { fontSize = Math.max(10, Math.min(26, fontSize + v)); }
-
     function saveSettings() {
         if(!myName) return;
         const c = document.getElementById('color-picker').value;
@@ -136,10 +113,7 @@
 
     document.getElementById('msg').addEventListener("keypress", e => {
         if(e.key === "Enter" && isVerified && e.target.value.trim() !== "") {
-            db.ref('messages').push().set({ 
-                u: myName, m: e.target.value, c: document.getElementById('color-picker').value,
-                b: isBold, i: isItalic, fs: fontSize 
-            });
+            db.ref('messages').push().set({ u: myName, m: e.target.value, c: document.getElementById('color-picker').value, b: isBold, i: isItalic, fs: fontSize });
             e.target.value = "";
         }
     });
@@ -167,24 +141,20 @@
         });
     });
 
-    function verify(t, v) {
-        db.ref('users/' + t).update({ isVerified: v });
-        db.ref('presence/' + t).update({ isVerified: v });
-    }
+    function verify(t, v) { db.ref('users/' + t).update({ isVerified: v }); db.ref('presence/' + t).update({ isVerified: v }); }
 
     function toggleEditMode() {
         isEditMode = !isEditMode;
         document.getElementById('main-body').classList.toggle('edit-mode-active');
-        const btn = document.getElementById('edit-btn');
         if(isEditMode) {
-            btn.innerText = "YENİ YERLEŞİMİ KAYDET";
+            document.getElementById('edit-btn').innerText = "KAYDET VE KAPAT";
             widgetIds.forEach(id => {
                 const el = document.getElementById(id);
-                const d = new Draggabilly(el, { handle: '.drag-handle', containment: '.main-stage' });
+                const d = new Draggabilly(el, { handle: '.drag-handle' });
                 d.on('dragEnd', function() {
-                    const x = this.position.x, y = this.position.y;
-                    db.ref('layout/' + id).update({ x, y });
-                    el.style.transform = "none"; el.style.left = x + "px"; el.style.top = y + "px";
+                    const pos = this.position;
+                    db.ref('layout/' + id).update({ x: pos.x, y: pos.y });
+                    el.style.transform = "none"; el.style.left = pos.x + "px"; el.style.top = pos.y + "px";
                 });
                 draggies.push(d);
                 const ro = new ResizeObserver(() => {
@@ -194,7 +164,7 @@
             });
         } else {
             document.getElementById('toast').style.display = "block";
-            setTimeout(() => { location.reload(); }, 1200);
+            setTimeout(() => { location.reload(); }, 1000);
         }
     }
 
