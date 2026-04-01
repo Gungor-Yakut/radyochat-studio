@@ -3,41 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <title>Filiz Yeşili FM - Pro Studio</title>
-    <link rel="stylesheet" href="style.css?v=11.0">
+    <link rel="stylesheet" href="style.css"> 
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/draggabilly@3/dist/draggabilly.pkgd.min.js"></script>
 </head>
 <body id="main-body">
 
+<div id="toast">YERLEŞİM KAYDEDİLDİ</div>
+
 <div id="admin-ctrl">
-    <div class="admin-btn" onclick="toggleEditMode()" id="edit-btn">DÜZENLE: KAPALI</div>
-    <div class="admin-btn" style="border-color:#ff4b2b; color:#ff4b2b;" onclick="clearAllMessages()">TEMİZLE</div>
+    <button class="admin-btn" onclick="toggleEditMode()" id="edit-btn">DÜZENLEME MODU</button>
+    <button class="admin-btn" style="border-color:#ff4b2b; color:#ff4b2b;" onclick="clearMsgs()">TEMİZLE</button>
+</div>
+
+<div id="login-modal">
+    <div class="login-box">
+        <h3 style="color:#00f2ff;">PANEL GİRİŞİ</h3>
+        <input type="text" id="nick-input" placeholder="Nick yazın..." autocomplete="off">
+        <button onclick="login()" style="width:100%; padding:12px; background:#00f2ff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">GİRİŞ YAP</button>
+        <p onclick="hideLogin()" style="color:#666; margin-top:10px; cursor:pointer; font-size:12px;">Kapat</p>
+    </div>
 </div>
 
 <div class="main-stage">
-    <div class="widget" id="chat-widget">
+    <div class="widget" id="login-widget" style="width:140px; height:50px;" onclick="showLogin()">
+        <div class="drag-handle"></div><span id="login-text" style="color:#00f2ff; font-weight:bold;">GİRİŞ YAP</span>
+    </div>
+
+    <div class="widget is-locked" id="chat-widget" style="width:400px; height:400px;">
+        <div class="drag-handle"></div><div id="chat-window"></div>
+    </div>
+
+    <div class="widget" id="tools-widget" style="width:240px; height:70px;">
         <div class="drag-handle"></div>
-        <div id="chat-window"></div>
+        <div class="mini-tools">
+            <input type="color" id="color-picker" value="#00f2ff" oninput="saveSettings()">
+            <button id="btn-bold" onclick="toggleStyle('bold')">B</button>
+            <button id="btn-italic" onclick="toggleStyle('italic')">I</button>
+            <button onclick="changeFontSize(2)">A+</button>
+            <button onclick="changeFontSize(-2)">A-</button>
+        </div>
     </div>
     
-    <div class="widget" id="input-widget">
+    <div class="widget" id="input-widget" style="width:400px; height:65px;">
         <div class="drag-handle"></div>
-        <div class="input-container">
-            <div class="mini-tools">
-                <input type="color" id="color-picker" value="#00f2ff" oninput="updateMyColor(this.value)">
-                <button id="btn-bold" onclick="toggleStyle('bold')">B</button>
-                <button id="btn-italic" onclick="toggleStyle('italic')">I</button>
-                <button onclick="changeFontSize(2)">+</button>
-                <button onclick="changeFontSize(-2)">-</button>
-            </div>
-            <input type="text" id="msg" placeholder="Mesaj yazın..." autocomplete="off">
+        <div class="input-flex">
+            <input type="text" id="msg" placeholder="Giriş bekleniyor..." disabled autocomplete="off">
         </div>
     </div>
 
-    <div class="widget" id="online-widget">
-        <div class="drag-handle"></div>
-        <div id="user-list"></div>
+    <div class="widget" id="online-widget" style="width:200px; height:540px;">
+        <div class="drag-handle"></div><div id="user-list" style="padding:12px;"></div>
     </div>
 </div>
 
@@ -52,105 +69,151 @@
     const db = firebase.database();
     const adminNick = "Filiz";
 
-    let myName = localStorage.getItem("chatNick") || prompt("Nickiniz:");
-    if(!myName) myName = "Misafir_" + Math.floor(Math.random()*99);
-    localStorage.setItem("chatNick", myName);
-
-    if(myName === adminNick) document.getElementById('admin-ctrl').style.display = 'flex';
-
-    let isEditMode = false;
+    let myName = localStorage.getItem("filiz_chat_nick") || "";
+    let isVerified = false, isEditMode = false;
+    let isBold = false, isItalic = false, fontSize = 14;
     let draggies = [];
-    const widgets = ['chat-widget', 'input-widget', 'online-widget'];
+    const widgetIds = ['chat-widget', 'input-widget', 'online-widget', 'login-widget', 'tools-widget'];
 
-    // DÜZENLEME MODU (TAŞIMA VE BOYUTLANDIRMA)
-    function toggleEditMode() {
-        isEditMode = !isEditMode;
-        const body = document.getElementById('main-body');
-        const btn = document.getElementById('edit-btn');
-        
-        if(isEditMode) {
-            body.classList.add('edit-mode-active');
-            btn.innerText = "DÜZENLE: AÇIK (Kapatınca Kaydeder)";
-            widgets.forEach(id => {
-                const el = document.getElementById(id);
-                // Taşıma
-                const d = new Draggabilly(el, { containment: '.main-stage', handle: '.drag-handle' });
-                d.on('dragEnd', () => db.ref('layout/'+id).update({ x: d.position.x, y: d.position.y }));
-                draggies.push(d);
-                // Boyutlandırma Takibi
-                const ro = new ResizeObserver(() => {
-                    if(isEditMode) db.ref('layout/'+id).update({ w: el.offsetWidth, h: el.offsetHeight });
-                });
-                ro.observe(el);
-            });
+    window.onload = () => {
+        if(myName) {
+            if(myName === adminNick) document.getElementById('admin-ctrl').style.display = 'flex';
+            startAuth();
         } else {
-            location.reload(); // Modu kapatınca temiz bir sayfa için yenile
+            let tempNick = "Misafir_" + Math.floor(Math.random() * 999);
+            const pRef = db.ref('presence/' + tempNick);
+            pRef.set({ name: tempNick, color: "#888", isVerified: false });
+            pRef.onDisconnect().remove();
         }
+    };
+
+    function showLogin() { if(!isEditMode) document.getElementById('login-modal').style.display = 'flex'; }
+    function hideLogin() { document.getElementById('login-modal').style.display = 'none'; }
+
+    function login() {
+        const val = document.getElementById('nick-input').value.trim();
+        if(!val) return;
+        localStorage.setItem("filiz_chat_nick", val);
+        myName = val;
+        location.reload(); 
     }
 
-    // VERİLERİ YÜKLE
-    widgets.forEach(id => {
-        const el = document.getElementById(id);
-        db.ref('layout/' + id).on('value', s => {
-            const p = s.val();
-            if(p && !isEditMode) {
-                el.style.left = p.x + "px"; el.style.top = p.y + "px";
-                el.style.width = p.w + "px"; el.style.height = p.h + "px";
-            }
-        });
-    });
+    function startAuth() {
+        const uRef = db.ref('presence/' + myName);
+        db.ref('users/' + myName).on('value', s => {
+            const data = s.val() || {};
+            isVerified = (data.isVerified === true) || (myName === adminNick);
+            const msgInp = document.getElementById('msg');
+            const chatBox = document.getElementById('chat-widget');
+            const logBtn = document.getElementById('login-text');
 
-    // MESAJLAŞMA SİSTEMİ
-    let isBold = false, isItalic = false, fontSize = 14;
+            if (isVerified) {
+                chatBox.classList.remove('is-locked');
+                msgInp.disabled = false; msgInp.placeholder = "Mesaj yazın...";
+                logBtn.innerText = myName.toUpperCase();
+            } else {
+                chatBox.classList.add('is-locked');
+                msgInp.disabled = true; msgInp.placeholder = "Onay bekleniyor...";
+                logBtn.innerText = "ONAY BEKLENİYOR";
+            }
+            uRef.set({ name: myName, color: data.color || "#00f2ff", isVerified: isVerified });
+            uRef.onDisconnect().remove();
+        });
+    }
+
     function toggleStyle(t) {
         if(t==='bold') { isBold=!isBold; document.getElementById('btn-bold').classList.toggle('active-tool'); }
         if(t==='italic') { isItalic=!isItalic; document.getElementById('btn-italic').classList.toggle('active-tool'); }
     }
-    function changeFontSize(v) { fontSize = Math.max(10, Math.min(30, fontSize + v)); }
+    function changeFontSize(v) { fontSize = Math.max(10, Math.min(26, fontSize + v)); }
+
+    function saveSettings() {
+        if(!myName) return;
+        const c = document.getElementById('color-picker').value;
+        db.ref('users/' + myName).update({ color: c });
+        db.ref('presence/' + myName).update({ color: c });
+    }
 
     document.getElementById('msg').addEventListener("keypress", e => {
-        if(e.key === "Enter" && e.target.value.trim() !== "") {
-            db.ref('messages').push().set({
+        if(e.key === "Enter" && isVerified && e.target.value.trim() !== "") {
+            db.ref('messages').push().set({ 
                 u: myName, m: e.target.value, c: document.getElementById('color-picker').value,
-                b: isBold, i: isItalic, s: fontSize, t: firebase.database.ServerValue.TIMESTAMP
+                b: isBold, i: isItalic, fs: fontSize 
             });
             e.target.value = "";
         }
     });
 
-    const win = document.getElementById('chat-window');
-    db.ref('messages').on('child_added', s => {
+    db.ref('messages').limitToLast(50).on('child_added', s => {
         const d = s.val();
         const m = document.createElement('div');
         m.className = 'msg';
-        m.style.cssText = `color:${d.c}; font-size:${d.s}px; font-weight:${d.b?'bold':'normal'}; font-style:${d.i?'italic':'normal'};`;
+        m.style.cssText = `color:${d.c}; font-size:${d.fs}px; font-weight:${d.b?'bold':'normal'}; font-style:${d.i?'italic':'normal'};`;
         m.innerHTML = `<b>${d.u}:</b> ${d.m}`;
-        win.prepend(m); // Yeni mesaj en üste gelir
+        document.getElementById('chat-window').prepend(m);
     });
 
-    // ONLINE TAKİBİ
-    function updateMyColor(val) { if(myName) db.ref('presence/' + myName).update({ color: val }); }
-    db.ref('.info/connected').on('value', s => {
-        if(s.val()) {
-            const pRef = db.ref('presence/' + myName);
-            pRef.set({ name: myName, color: document.getElementById('color-picker').value });
-            pRef.onDisconnect().remove();
-        }
-    });
     db.ref('presence').on('value', s => {
         const list = document.getElementById('user-list');
         list.innerHTML = "";
         s.forEach(user => {
             const ud = user.val();
             const div = document.createElement('div');
-            div.style.color = ud.color || '#00f2ff';
-            div.innerHTML = `● ${ud.name}`;
+            div.className = `online-user ${ud.isVerified ? '' : 'unverified'}`;
+            div.style.color = ud.color;
+            let cb = (myName === adminNick && ud.name !== adminNick) ? `<input type="checkbox" onchange="verify('${ud.name}', this.checked)" ${ud.isVerified?'checked':''}>` : "";
+            div.innerHTML = `${cb} ● ${ud.name}`;
             list.appendChild(div);
         });
     });
 
-    function clearAllMessages() { if(confirm("Silinsin mi?")) db.ref('messages').remove(); }
-    db.ref('messages').on('child_removed', () => win.innerHTML = "");
+    function verify(t, v) {
+        db.ref('users/' + t).update({ isVerified: v });
+        db.ref('presence/' + t).update({ isVerified: v });
+    }
+
+    function toggleEditMode() {
+        isEditMode = !isEditMode;
+        document.getElementById('main-body').classList.toggle('edit-mode-active');
+        const btn = document.getElementById('edit-btn');
+        if(isEditMode) {
+            btn.innerText = "YENİ YERLEŞİMİ KAYDET";
+            widgetIds.forEach(id => {
+                const el = document.getElementById(id);
+                const d = new Draggabilly(el, { handle: '.drag-handle', containment: '.main-stage' });
+                d.on('dragEnd', function() {
+                    const x = this.position.x, y = this.position.y;
+                    db.ref('layout/' + id).update({ x, y });
+                    el.style.transform = "none"; el.style.left = x + "px"; el.style.top = y + "px";
+                });
+                draggies.push(d);
+                const ro = new ResizeObserver(() => {
+                    if(isEditMode) db.ref('layout/' + id).update({ w: el.offsetWidth, h: el.offsetHeight });
+                });
+                ro.observe(el);
+            });
+        } else {
+            document.getElementById('toast').style.display = "block";
+            setTimeout(() => { location.reload(); }, 1200);
+        }
+    }
+
+    db.ref('layout').on('value', s => {
+        if(!isEditMode) {
+            const data = s.val();
+            widgetIds.forEach(id => {
+                const el = document.getElementById(id);
+                if(data && data[id]) {
+                    el.style.left = data[id].x + "px"; el.style.top = data[id].y + "px";
+                    el.style.width = data[id].w + "px"; el.style.height = data[id].h + "px";
+                }
+                el.style.opacity = "1";
+            });
+        }
+    });
+
+    function clearMsgs() { if(confirm("Tüm mesajlar silinecek?")) db.ref('messages').remove(); }
+    db.ref('messages').on('child_removed', () => document.getElementById('chat-window').innerHTML = "");
 </script>
 </body>
 </html>
