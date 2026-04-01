@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Filiz Yeşili FM - Studio</title>
+    <title>Filiz Yeşili FM - v47.5</title>
     <link rel="stylesheet" href="style.css"> 
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
@@ -10,37 +10,68 @@
 </head>
 <body id="main-body">
 
-<div id="toast">GÜNCEL YERLEŞİM KAYDEDİLDİ</div>
+<div id="toast">AYARLAR KAYDEDİLDİ</div>
 
-<div id="admin-ctrl">
-    <button class="admin-btn" onclick="toggleEditMode()" id="edit-btn">DÜZENLEME MODU</button>
-    <button class="admin-btn" style="border-color:#ff4b2b; color:#ff4b2b;" onclick="clearMsgs()">TEMİZLE</button>
-</div>
-
-<div id="login-modal">
-    <div class="login-box">
-        <h3 style="color:#00f2ff;">PANEL GİRİŞİ</h3>
-        <input type="text" id="nick-input" placeholder="Nickinizi yazın...">
-        <button onclick="login()" style="width:100%; padding:12px; background:#00f2ff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">GİRİŞ YAP</button>
-        <p onclick="hideLogin()" style="color:#666; margin-top:10px; cursor:pointer; font-size:12px;">Kapat</p>
+<div id="login-modal" class="modal-overlay">
+    <div class="modal-box">
+        <h2 style="color:#00f2ff; margin-bottom:20px;">SİSTEME GİRİŞ</h2>
+        <input type="text" id="nick-input" placeholder="Nickinizi yazın..." style="width:100%; padding:10px; margin-bottom:15px; background:#000; border:1px solid #333; color:#fff;">
+        <button onclick="confirmLogin()" style="width:100%; padding:12px; background:#00f2ff; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">GİRİŞ YAP</button>
     </div>
 </div>
 
-<div class="main-stage" style="position: relative; width: 100%; height: 100vh;">
-    <div class="widget" id="login-widget" onclick="showLogin()"><div class="drag-handle"></div><span id="login-text" style="color:#00f2ff; font-weight:bold; text-align:center; padding: 10px; display:block;">GİRİŞ YAP</span></div>
-    <div class="widget is-locked" id="chat-widget"><div class="drag-handle"></div><div id="chat-window"></div></div>
+<div id="context-menu">
+    <div onclick="setEditMode('move')">✥ TAŞIMA MODU</div>
+    <div onclick="setEditMode('resize')">⤗ BOYUTLANDIRMA MODU</div>
+    <div onclick="saveAndLock()" style="color:#00f2ff; border-top:1px solid #333;">✔ KAYDET VE KİLİTLE</div>
+    <div onclick="clearMsgs()" style="color:#ff4b2b;">🗑 MESAJLARI TEMİZLE</div>
+</div>
+
+<div class="main-stage">
+    <div class="widget" id="login-widget"><div id="auth-btn" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; color:#00f2ff;" onclick="handleAuth()">GİRİŞ YAP</div></div>
+    
+    <div class="widget" id="chat-widget"><div id="chat-window"></div></div>
+    
     <div class="widget" id="tools-widget">
-        <div class="drag-handle"></div>
         <div class="mini-tools">
-            <input type="color" id="color-picker" value="#00f2ff" oninput="saveSettings()">
+            <div id="current-color-btn" style="background:#00f2ff;" onclick="togglePanel('color-dropdown')"></div>
+            <div id="color-dropdown">
+                <div class="color-grid">
+                    <div class="grid-dot" style="background:#ffffff" onclick="applyColor('#ffffff')"></div>
+                    <div class="grid-dot" style="background:#000000" onclick="applyColor('#000000')"></div>
+                    <div class="grid-dot" style="background:#00007f" onclick="applyColor('#00007f')"></div>
+                    <div class="grid-dot" style="background:#009300" onclick="applyColor('#009300')"></div>
+                    <div class="grid-dot" style="background:#ff0000" onclick="applyColor('#ff0000')"></div>
+                    <div class="grid-dot" style="background:#7f0000" onclick="applyColor('#7f0000')"></div>
+                    <div class="grid-dot" style="background:#9c009c" onclick="applyColor('#9c009c')"></div>
+                    <div class="grid-dot" style="background:#fc7f00" onclick="applyColor('#fc7f00')"></div>
+                    <div class="grid-dot" style="background:#ffff00" onclick="applyColor('#ffff00')"></div>
+                    <div class="grid-dot" style="background:#00fc00" onclick="applyColor('#00fc00')"></div>
+                    <div class="grid-dot" style="background:#009393" onclick="applyColor('#009393')"></div>
+                    <div class="grid-dot" style="background:#00ffff" onclick="applyColor('#00ffff')"></div>
+                    <div class="grid-dot" style="background:#0000fc" onclick="applyColor('#0000fc')"></div>
+                    <div class="grid-dot" style="background:#ff00ff" onclick="applyColor('#ff00ff')"></div>
+                    <div class="grid-dot" style="background:#7f7f7f" onclick="applyColor('#7f7f7f')"></div>
+                    <div class="grid-dot" style="background:#d2d2d2" onclick="applyColor('#d2d2d2')"></div>
+                </div>
+                <button onclick="document.getElementById('adv-picker').click()" style="width:100%; padding:5px; background:#222; border:1px solid #444; color:#fff; font-size:10px; margin-top:5px;">+ ÖZEL RENK</button>
+                <input type="color" id="adv-picker" style="display:none" oninput="applyColor(this.value)">
+            </div>
+
+            <button onclick="togglePanel('emoji-dropdown')">😊</button>
+            <div id="emoji-dropdown"><div class="emoji-grid" id="emoji-list"></div></div>
+
             <button id="btn-bold" onclick="toggleStyle('bold')">B</button>
             <button id="btn-italic" onclick="toggleStyle('italic')">I</button>
+            
             <button onclick="changeFontSize(2)">+</button>
             <button onclick="changeFontSize(-2)">-</button>
+            <span id="fs-indicator">14px</span>
         </div>
     </div>
-    <div class="widget" id="input-widget"><div class="drag-handle"></div><div class="input-flex"><input type="text" id="msg" placeholder="Lütfen giriş yapın..." disabled autocomplete="off"></div></div>
-    <div class="widget" id="online-widget"><div class="drag-handle"></div><div id="user-list" style="padding:10px;"></div></div>
+
+    <div class="widget" id="input-widget"><input type="text" id="msg" placeholder="Önce giriş yapın..." disabled></div>
+    <div class="widget" id="online-widget"><div id="user-list"></div></div>
 </div>
 
 <script>
@@ -54,136 +85,159 @@
     const db = firebase.database();
     const adminNick = "Filiz";
 
-    let myName = localStorage.getItem("filiz_chat_nick") || "";
-    let isVerified = false, isEditMode = false, draggies = [];
-    let isBold = false, isItalic = false, fontSize = 14;
+    let myName = sessionStorage.getItem("filiz_chat_nick") || "";
+    let isVerified = false, isEditMode = false, draggies = [], isBold = false, isItalic = false;
+    let currentColor = "#00f2ff", fontSize = 14, messageListener = null;
     const widgetIds = ['chat-widget', 'input-widget', 'online-widget', 'login-widget', 'tools-widget'];
+    const emojis = ['😊','😂','😍','😎','🤔','😮','😢','😡','👍','👎','🔥','❤️','✨','⭐','✅','❌','🎧','📻','🎵','🎶','📢','💬','⚡','🌈'];
 
-    window.onload = () => {
-        if(myName) {
-            if(myName === adminNick) document.getElementById('admin-ctrl').style.display = 'flex';
-            startAuth();
-        }
+    window.onload = () => { 
+        initEmojis();
+        loadLayout(); 
+        loadUsers(); 
+        if(myName) startAuth(); else showLocked(); 
     };
 
-    function showLogin() { if(!isEditMode) document.getElementById('login-modal').style.display = 'flex'; }
-    function hideLogin() { document.getElementById('login-modal').style.display = 'none'; }
-    function login() {
-        const val = document.getElementById('nick-input').value.trim();
-        if(!val) return;
-        localStorage.setItem("filiz_chat_nick", val);
-        myName = val;
-        location.reload();
+    function initEmojis() {
+        const el = document.getElementById('emoji-list');
+        emojis.forEach(e => {
+            const div = document.createElement('div');
+            div.className = 'emoji-item';
+            div.innerText = e;
+            div.onclick = () => {
+                const msgInp = document.getElementById('msg');
+                msgInp.value += e;
+                msgInp.focus();
+                document.getElementById('emoji-dropdown').style.display = 'none';
+            };
+            el.appendChild(div);
+        });
+    }
+
+    function togglePanel(id) {
+        if(isEditMode) return;
+        const target = document.getElementById(id);
+        const otherId = (id === 'color-dropdown') ? 'emoji-dropdown' : 'color-dropdown';
+        document.getElementById(otherId).style.display = 'none';
+        target.style.display = (target.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function changeFontSize(delta) {
+        if(isEditMode) return;
+        fontSize = Math.max(12, Math.min(26, fontSize + delta));
+        document.getElementById('fs-indicator').innerText = fontSize + "px";
     }
 
     function startAuth() {
         const uRef = db.ref('presence/' + myName);
         db.ref('users/' + myName).on('value', s => {
-            const data = s.val() || {};
-            isVerified = (data.isVerified === true) || (myName === adminNick);
+            const d = s.val() || {};
+            isVerified = d.isVerified || (myName === adminNick);
             const msgInp = document.getElementById('msg');
-            const chatBox = document.getElementById('chat-widget');
-            const logBtn = document.getElementById('login-text');
-
-            if (isVerified) {
-                chatBox.classList.remove('is-locked');
-                msgInp.disabled = false; msgInp.placeholder = "Mesajınızı yazın...";
-                logBtn.innerText = myName.toUpperCase();
+            const authBtn = document.getElementById('auth-btn');
+            authBtn.innerText = "ÇIKIŞ YAP";
+            authBtn.style.color = "#ff4b2b";
+            if(isVerified) {
+                msgInp.disabled = false;
+                msgInp.placeholder = "Mesaj yazın...";
+                loadMessages();
             } else {
-                chatBox.classList.add('is-locked');
-                msgInp.disabled = true; msgInp.placeholder = "Onay bekleniyor...";
-                logBtn.innerText = "BEKLEMEDE";
+                msgInp.disabled = true;
+                msgInp.placeholder = "Onay bekleniyor...";
             }
-            uRef.set({ name: myName, color: data.color || "#00f2ff", isVerified: isVerified });
+            uRef.set({ name: myName, color: currentColor, isVerified: isVerified });
             uRef.onDisconnect().remove();
         });
     }
 
-    function toggleStyle(t) {
-        if(t==='bold') { isBold=!isBold; document.getElementById('btn-bold').classList.toggle('active-tool'); }
-        if(t==='italic') { isItalic=!isItalic; document.getElementById('btn-italic').classList.toggle('active-tool'); }
-    }
-    function changeFontSize(v) { fontSize = Math.max(10, Math.min(26, fontSize + v)); }
-    function saveSettings() {
-        if(!myName) return;
-        const c = document.getElementById('color-picker').value;
-        db.ref('users/' + myName).update({ color: c });
-        db.ref('presence/' + myName).update({ color: c });
+    function applyColor(c) {
+        currentColor = c;
+        document.getElementById('current-color-btn').style.background = c;
+        document.getElementById('color-dropdown').style.display = 'none';
+        if(myName) db.ref('presence/' + myName).update({ color: c });
     }
 
-    document.getElementById('msg').addEventListener("keypress", e => {
-        if(e.key === "Enter" && isVerified && e.target.value.trim() !== "") {
-            db.ref('messages').push().set({ u: myName, m: e.target.value, c: document.getElementById('color-picker').value, b: isBold, i: isItalic, fs: fontSize });
-            e.target.value = "";
-        }
-    });
+    function toggleStyle(t) { 
+        if(isEditMode) return;
+        if(t==='bold') { isBold = !isBold; document.getElementById('btn-bold').classList.toggle('active-tool'); }
+        if(t==='italic') { isItalic = !isItalic; document.getElementById('btn-italic').classList.toggle('active-tool'); }
+    }
 
-    db.ref('messages').limitToLast(50).on('child_added', s => {
-        const d = s.val();
-        const m = document.createElement('div');
-        m.className = 'msg';
-        m.style.cssText = `color:${d.c}; font-size:${d.fs}px; font-weight:${d.b?'bold':'normal'}; font-style:${d.i?'italic':'normal'};`;
-        m.innerHTML = `<b>${d.u}:</b> ${d.m}`;
-        document.getElementById('chat-window').prepend(m);
-    });
-
-    db.ref('presence').on('value', s => {
-        const list = document.getElementById('user-list');
-        list.innerHTML = "";
-        s.forEach(user => {
-            const ud = user.val();
-            const div = document.createElement('div');
-            div.className = `online-user ${ud.isVerified ? '' : 'unverified'}`;
-            div.style.color = ud.color;
-            let cb = (myName === adminNick && ud.name !== adminNick) ? `<input type="checkbox" onchange="verify('${ud.name}', this.checked)" ${ud.isVerified?'checked':''}>` : "";
-            div.innerHTML = `${cb} ● ${ud.name}`;
-            list.appendChild(div);
+    function loadMessages() {
+        if(messageListener) return;
+        const win = document.getElementById('chat-window');
+        win.innerHTML = "";
+        messageListener = db.ref('messages').limitToLast(50).on('child_added', s => {
+            const d = s.val();
+            const m = document.createElement('div');
+            m.style.cssText = `color:${d.c}; font-weight:${d.b?'bold':'normal'}; font-style:${d.i?'italic':'normal'}; font-size:${d.s || 14}px; margin-bottom:8px;`;
+            m.innerHTML = `<b>${d.u}:</b> ${d.m}`;
+            win.prepend(m);
         });
-    });
+    }
 
-    function verify(t, v) { db.ref('users/' + t).update({ isVerified: v }); db.ref('presence/' + t).update({ isVerified: v }); }
+    function loadUsers() {
+        db.ref('presence').on('value', s => {
+            const list = document.getElementById('user-list');
+            list.innerHTML = "";
+            s.forEach(u => {
+                const ud = u.val();
+                const div = document.createElement('div');
+                div.className = "online-user " + (ud.isVerified ? "" : "unverified");
+                div.style.color = ud.color || "#00f2ff";
+                let cb = (myName === adminNick && ud.name !== adminNick) ? `<input type="checkbox" onchange="verify('${ud.name}', this.checked)" ${ud.isVerified?'checked':''}>` : "";
+                div.innerHTML = `${cb} ● ${ud.name}`;
+                list.appendChild(div);
+            });
+        });
+    }
 
-    function toggleEditMode() {
-        isEditMode = !isEditMode;
-        document.getElementById('main-body').classList.toggle('edit-mode-active');
-        if(isEditMode) {
-            document.getElementById('edit-btn').innerText = "KAYDET VE KAPAT";
-            widgetIds.forEach(id => {
-                const el = document.getElementById(id);
-                const d = new Draggabilly(el, { handle: '.drag-handle' });
-                d.on('dragEnd', function() {
-                    const pos = this.position;
-                    db.ref('layout/' + id).update({ x: pos.x, y: pos.y });
-                    el.style.transform = "none"; el.style.left = pos.x + "px"; el.style.top = pos.y + "px";
+    function verify(t, v) { db.ref('users/' + t).update({ isVerified: v }); }
+
+    window.oncontextmenu = (e) => {
+        if(myName !== adminNick) return;
+        e.preventDefault();
+        const m = document.getElementById('context-menu');
+        m.style.display = 'block'; m.style.left = e.clientX + 'px'; m.style.top = e.clientY + 'px';
+    };
+
+    window.onclick = () => document.getElementById('context-menu').style.display = 'none';
+
+    function setEditMode(type) {
+        isEditMode = true;
+        document.getElementById('main-body').className = "edit-mode-active mode-" + type;
+        draggies.forEach(d => d.destroy()); draggies = [];
+        widgetIds.forEach(id => {
+            const el = document.getElementById(id);
+            if(type === 'move') {
+                const d = new Draggabilly(el);
+                d.on('dragEnd', function() { 
+                    db.ref('layout/'+id).update({ x: this.position.x, y: this.position.y }); 
+                    el.style.transform="none"; el.style.left=this.position.x+"px"; el.style.top=this.position.y+"px";
                 });
                 draggies.push(d);
-                const ro = new ResizeObserver(() => {
-                    if(isEditMode) db.ref('layout/' + id).update({ w: el.offsetWidth, h: el.offsetHeight });
-                });
+            }
+            if(type === 'resize') {
+                const ro = new ResizeObserver(() => { if(isEditMode) db.ref('layout/'+id).update({ w: el.offsetWidth, h: el.offsetHeight }); });
                 ro.observe(el);
-            });
-        } else {
-            document.getElementById('toast').style.display = "block";
-            setTimeout(() => { location.reload(); }, 1000);
-        }
+            }
+        });
     }
 
-    db.ref('layout').on('value', s => {
-        if(!isEditMode) {
-            const data = s.val();
-            widgetIds.forEach(id => {
-                const el = document.getElementById(id);
-                if(data && data[id]) {
-                    el.style.left = data[id].x + "px"; el.style.top = data[id].y + "px";
-                    el.style.width = data[id].w + "px"; el.style.height = data[id].h + "px";
-                }
-                el.style.opacity = "1";
-            });
-        }
-    });
-
-    function clearMsgs() { if(confirm("Tüm mesajlar silinecek?")) db.ref('messages').remove(); }
+    function saveAndLock() { document.getElementById('toast').style.display="block"; setTimeout(()=>location.reload(), 1000); }
+    function loadLayout() { db.ref('layout').once('value', s => { const d = s.val() || {}; widgetIds.forEach(id => { const el = document.getElementById(id); if(d[id]) { el.style.left=d[id].x+"px"; el.style.top=d[id].y+"px"; el.style.width=d[id].w+"px"; el.style.height=d[id].h+"px"; } }); }); }
+    function showLocked() { document.getElementById('chat-window').innerHTML = "<div style='padding:20px; text-align:center; color:#ff4b2b; font-size:12px;'>⚠️ Sohbet Kilitli.</div>"; }
+    function handleAuth() { if(myName) { if(confirm("Çıkış?")) { sessionStorage.removeItem("filiz_chat_nick"); location.reload(); } } else { document.getElementById('login-modal').style.display='flex'; } }
+    function confirmLogin() { const v = document.getElementById('nick-input').value.trim(); if(v) { sessionStorage.setItem("filiz_chat_nick", v); location.reload(); } }
+    function clearMsgs() { if(confirm("Temizle?")) db.ref('messages').remove(); }
     db.ref('messages').on('child_removed', () => document.getElementById('chat-window').innerHTML = "");
+
+    document.getElementById('msg').onkeypress = (e) => {
+        if(e.key === "Enter" && isVerified && e.target.value.trim() !== "") {
+            db.ref('messages').push().set({ u: myName, m: e.target.value, c: currentColor, b: isBold, i: isItalic, s: fontSize });
+            e.target.value = "";
+        }
+    };
 </script>
 </body>
 </html>
