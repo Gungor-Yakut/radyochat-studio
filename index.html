@@ -122,10 +122,15 @@
         target.style.display = (target.style.display === 'flex') ? 'none' : 'flex';
     }
 
+    // GÜNCELLENEN KISIM: Sadece yerel ekranı etkiler
     function changeFontSize(delta) {
         if(isEditMode) return;
-        fontSize = Math.max(12, Math.min(26, fontSize + delta));
+        fontSize = Math.max(10, Math.min(30, fontSize + delta));
         document.getElementById('fs-indicator').innerText = fontSize + "px";
+        
+        // Mevcut tüm mesajların boyutunu anında güncelle
+        const allMsgs = document.querySelectorAll('.chat-msg-row');
+        allMsgs.forEach(m => m.style.fontSize = fontSize + "px");
     }
 
     function startAuth() {
@@ -163,6 +168,7 @@
         if(t==='italic') { isItalic = !isItalic; document.getElementById('btn-italic').classList.toggle('active-tool'); }
     }
 
+    // GÜNCELLENEN KISIM: Gelen mesajı yerel boyutta (fontSize) gösterir
     function loadMessages() {
         if(messageListener) return;
         const win = document.getElementById('chat-window');
@@ -170,7 +176,8 @@
         messageListener = db.ref('messages').limitToLast(50).on('child_added', s => {
             const d = s.val();
             const m = document.createElement('div');
-            m.style.cssText = `color:${d.c}; font-weight:${d.b?'bold':'normal'}; font-style:${d.i?'italic':'normal'}; font-size:${d.s || 14}px; margin-bottom:8px;`;
+            m.className = "chat-msg-row"; // CSS kontrolü için class ekledik
+            m.style.cssText = `color:${d.c}; font-weight:${d.b?'bold':'normal'}; font-style:${d.i?'italic':'normal'}; font-size:${fontSize}px; margin-bottom:8px;`;
             m.innerHTML = `<b>${d.u}:</b> ${d.m}`;
             win.prepend(m);
         });
@@ -232,9 +239,17 @@
     function clearMsgs() { if(confirm("Temizle?")) db.ref('messages').remove(); }
     db.ref('messages').on('child_removed', () => document.getElementById('chat-window').innerHTML = "");
 
+    // GÜNCELLENEN KISIM: 's: fontSize' veritabanına gönderilmiyor
     document.getElementById('msg').onkeypress = (e) => {
         if(e.key === "Enter" && isVerified && e.target.value.trim() !== "") {
-            db.ref('messages').push().set({ u: myName, m: e.target.value, c: currentColor, b: isBold, i: isItalic, s: fontSize });
+            db.ref('messages').push().set({ 
+                u: myName, 
+                m: e.target.value, 
+                c: currentColor, 
+                b: isBold, 
+                i: isItalic 
+                // s (size) bilgisini sildik
+            });
             e.target.value = "";
         }
     };
