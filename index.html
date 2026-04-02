@@ -2,25 +2,58 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Filiz Yeşili FM - v47.5</title>
+    <title>Filiz Yeşili FM - v60.0</title>
     <link rel="stylesheet" href="style.css"> 
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/draggabilly@3/dist/draggabilly.pkgd.min.js"></script>
+    <style>
+        /* Tasarım ve Mesaj Stilleri */
+        .online-user-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .user-name-label { flex: 1; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .unverified { text-decoration: line-through; opacity: 0.5; filter: grayscale(1); }
+        .user-approve-check { width: 16px; height: 16px; cursor: pointer; accent-color: #00f2ff; margin-left: 10px; }
+        #login-err { color: #ff4b2b; font-size: 12px; margin-top: 10px; display: none; text-align: center; }
+        .system-msg { color: #ffcc00; font-weight: bold; text-align: center; font-size: 12px; padding: 15px 0; border-bottom: 1px dashed rgba(255,204,0,0.3); margin-bottom: 15px; width: 100%; }
+        .join-warn { color: #888; text-align: center; padding: 20px; font-size: 12px; font-style: italic; }
+        .remember-box { display: flex; align-items: center; gap: 8px; color: #ccc; font-size: 12px; margin-bottom: 15px; cursor: pointer; justify-content: center; }
+        
+        #context-menu {
+            position: fixed;
+            display: none;
+            background: #000;
+            border: 1px solid #00f2ff;
+            color: #fff;
+            padding: 5px;
+            z-index: 10000;
+            min-width: 160px;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+        }
+        #context-menu div { padding: 10px; font-size: 11px; cursor: pointer; transition: 0.2s; }
+        #context-menu div:hover { background: rgba(0, 242, 255, 0.2); }
+    </style>
 </head>
 <body id="main-body">
 
 <div id="toast">AYARLAR KAYDEDİLDİ</div>
 
-<div id="login-modal" class="modal-overlay">
+<div id="login-modal" class="modal-overlay" style="display:none;">
     <div class="modal-box">
         <h2 style="color:#00f2ff; margin-bottom:20px;">SİSTEME GİRİŞ</h2>
-        <input type="text" id="nick-input" placeholder="Nickinizi yazın..." style="width:100%; padding:10px; margin-bottom:15px; background:#000; border:1px solid #333; color:#fff;">
-        <button onclick="confirmLogin()" style="width:100%; padding:12px; background:#00f2ff; border:none; border-radius:10px; font-weight:bold; cursor:pointer;">GİRİŞ YAP</button>
+        <input type="text" id="nick-input" placeholder="Nickinizi yazın..." style="width:100%; padding:10px; margin-bottom:10px; background:#000; border:1px solid #333; color:#fff;">
+        <input type="password" id="pass-input" placeholder="Şifreniz..." style="width:100%; padding:10px; margin-bottom:10px; background:#000; border:1px solid #333; color:#fff;">
+        
+        <label class="remember-box">
+            <input type="checkbox" id="remember-me"> Beni Hatırla
+        </label>
+
+        <button onclick="confirmLogin()" style="width:100%; padding:12px; background:#00f2ff; border:none; border-radius:10px; font-weight:bold; cursor:pointer; color:#000;">GİRİŞ YAP / KAYDOL</button>
+        <p id="login-err"></p>
     </div>
 </div>
 
 <div id="context-menu">
+    <div id="admin-link" onclick="window.open('admin.html', '_blank')" style="color:#00fc00; border-bottom:1px solid #333; display:none;">⚙ YÖNETİM PANELİ</div>
     <div onclick="setEditMode('move')">✥ TAŞIMA MODU</div>
     <div onclick="setEditMode('resize')">⤗ BOYUTLANDIRMA MODU</div>
     <div onclick="saveAndLock()" style="color:#00f2ff; border-top:1px solid #333;">✔ KAYDET VE KİLİTLE</div>
@@ -28,49 +61,32 @@
 </div>
 
 <div class="main-stage">
-    <div class="widget" id="login-widget"><div id="auth-btn" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; color:#00f2ff;" onclick="handleAuth()">GİRİŞ YAP</div></div>
-    
+    <div class="widget" id="login-widget">
+        <div id="auth-btn" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; color:#00f2ff;" onclick="handleAuth()">GİRİŞ YAP</div>
+    </div>
     <div class="widget" id="chat-widget"><div id="chat-window"></div></div>
-    
     <div class="widget" id="tools-widget">
         <div class="mini-tools">
             <div id="current-color-btn" style="background:#00f2ff;" onclick="togglePanel('color-dropdown')"></div>
-            <div id="color-dropdown">
+            <div id="color-dropdown" style="display:none;">
                 <div class="color-grid">
                     <div class="grid-dot" style="background:#ffffff" onclick="applyColor('#ffffff')"></div>
-                    <div class="grid-dot" style="background:#000000" onclick="applyColor('#000000')"></div>
-                    <div class="grid-dot" style="background:#00007f" onclick="applyColor('#00007f')"></div>
-                    <div class="grid-dot" style="background:#009300" onclick="applyColor('#009300')"></div>
                     <div class="grid-dot" style="background:#ff0000" onclick="applyColor('#ff0000')"></div>
-                    <div class="grid-dot" style="background:#7f0000" onclick="applyColor('#7f0000')"></div>
-                    <div class="grid-dot" style="background:#9c009c" onclick="applyColor('#9c009c')"></div>
-                    <div class="grid-dot" style="background:#fc7f00" onclick="applyColor('#fc7f00')"></div>
-                    <div class="grid-dot" style="background:#ffff00" onclick="applyColor('#ffff00')"></div>
                     <div class="grid-dot" style="background:#00fc00" onclick="applyColor('#00fc00')"></div>
-                    <div class="grid-dot" style="background:#009393" onclick="applyColor('#009393')"></div>
                     <div class="grid-dot" style="background:#00ffff" onclick="applyColor('#00ffff')"></div>
-                    <div class="grid-dot" style="background:#0000fc" onclick="applyColor('#0000fc')"></div>
-                    <div class="grid-dot" style="background:#ff00ff" onclick="applyColor('#ff00ff')"></div>
-                    <div class="grid-dot" style="background:#7f7f7f" onclick="applyColor('#7f7f7f')"></div>
-                    <div class="grid-dot" style="background:#d2d2d2" onclick="applyColor('#d2d2d2')"></div>
                 </div>
-                <button onclick="document.getElementById('adv-picker').click()" style="width:100%; padding:5px; background:#222; border:1px solid #444; color:#fff; font-size:10px; margin-top:5px;">+ ÖZEL RENK</button>
                 <input type="color" id="adv-picker" style="display:none" oninput="applyColor(this.value)">
+                <button onclick="document.getElementById('adv-picker').click()" style="width:100%; font-size:10px; margin-top:5px;">+ RENK</button>
             </div>
-
             <button onclick="togglePanel('emoji-dropdown')">😊</button>
-            <div id="emoji-dropdown"><div class="emoji-grid" id="emoji-list"></div></div>
-
+            <div id="emoji-dropdown" style="display:none;"><div class="emoji-grid" id="emoji-list"></div></div>
             <button id="btn-bold" onclick="toggleStyle('bold')">B</button>
             <button id="btn-italic" onclick="toggleStyle('italic')">I</button>
-            
             <button onclick="changeFontSize(2)">+</button>
             <button onclick="changeFontSize(-2)">-</button>
-            <span id="fs-indicator">14px</span>
         </div>
     </div>
-
-    <div class="widget" id="input-widget"><input type="text" id="msg" placeholder="Önce giriş yapın..." disabled></div>
+    <div class="widget" id="input-widget"><input type="text" id="msg" placeholder="Lütfen giriş yapın..." disabled></div>
     <div class="widget" id="online-widget"><div id="user-list"></div></div>
 </div>
 
@@ -83,135 +99,195 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const adminNick = "Filiz";
+    const rootNick = "Filiz Yeşili FM";
 
-    let myName = sessionStorage.getItem("filiz_chat_nick") || "";
-    let isVerified = false, isEditMode = false, draggies = [], isBold = false, isItalic = false;
-    let currentColor = "#00f2ff", fontSize = 14, messageListener = null;
+    // BENİ HATIRLA KONTROLÜ (Local ve Session)
+    let myName = localStorage.getItem("filiz_chat_nick") || sessionStorage.getItem("filiz_chat_nick") || "";
+    let isVerified = false, fontSize = 14, myRole = "Misafir", currentColor = "#00f2ff", isBold = false, isItalic = false;
+    let draggies = [];
     const widgetIds = ['chat-widget', 'input-widget', 'online-widget', 'login-widget', 'tools-widget'];
-    const emojis = ['😊','😂','😍','😎','🤔','😮','😢','😡','👍','👎','🔥','❤️','✨','⭐','✅','❌','🎧','📻','🎵','🎶','📢','💬','⚡','🌈'];
+    const emojis = ['😊','😂','😍','😎','👍','🔥','❤️','✨','⭐','✅','🎧','📻','🎵','🎶','📢','⚡'];
 
-    window.onload = () => { 
-        initEmojis();
-        loadLayout(); 
-        loadUsers(); 
-        if(myName) startAuth(); else showLocked(); 
-    };
+    window.onload = () => { initEmojis(); loadLayout(); loadUsers(); if(myName) startAuth(); else showLocked(); };
 
     function initEmojis() {
         const el = document.getElementById('emoji-list');
         emojis.forEach(e => {
-            const div = document.createElement('div');
-            div.className = 'emoji-item';
-            div.innerText = e;
-            div.onclick = () => {
-                const msgInp = document.getElementById('msg');
-                msgInp.value += e;
-                msgInp.focus();
-                document.getElementById('emoji-dropdown').style.display = 'none';
-            };
+            const div = document.createElement('div'); div.className = 'emoji-item'; div.innerText = e;
+            div.onclick = () => { document.getElementById('msg').value += e; document.getElementById('emoji-dropdown').style.display = 'none'; };
             el.appendChild(div);
         });
     }
 
-    function togglePanel(id) {
-        if(isEditMode) return;
-        const target = document.getElementById(id);
-        const otherId = (id === 'color-dropdown') ? 'emoji-dropdown' : 'color-dropdown';
-        document.getElementById(otherId).style.display = 'none';
-        target.style.display = (target.style.display === 'flex') ? 'none' : 'flex';
-    }
+    async function confirmLogin() {
+        const nick = document.getElementById('nick-input').value.trim();
+        const pass = document.getElementById('pass-input').value.trim();
+        const remember = document.getElementById('remember-me').checked;
+        const err = document.getElementById('login-err');
 
-    // GÜNCELLENEN KISIM: Sadece yerel ekranı etkiler
-    function changeFontSize(delta) {
-        if(isEditMode) return;
-        fontSize = Math.max(10, Math.min(30, fontSize + delta));
-        document.getElementById('fs-indicator').innerText = fontSize + "px";
-        
-        // Mevcut tüm mesajların boyutunu anında güncelle
-        const allMsgs = document.querySelectorAll('.chat-msg-row');
-        allMsgs.forEach(m => m.style.fontSize = fontSize + "px");
+        if(!nick || !pass) return alert("Lütfen alanları doldurun!");
+
+        const s = await db.ref('users/' + nick).once('value');
+        const userData = s.val();
+
+        const loginSuccess = () => {
+            if(remember) localStorage.setItem("filiz_chat_nick", nick);
+            else sessionStorage.setItem("filiz_chat_nick", nick);
+            location.reload();
+        };
+
+        if (userData) {
+            if (userData.password === pass) loginSuccess();
+            else { err.innerText = "Hatalı şifre!"; err.style.display = "block"; }
+        } else {
+            if(confirm("Yeni hesap oluşturulsun mu?")) {
+                await db.ref('users/' + nick).set({ username: nick, password: pass, role: "Üye", isVerified: false, color: "#ffffff" });
+                loginSuccess();
+            }
+        }
     }
 
     function startAuth() {
-        const uRef = db.ref('presence/' + myName);
         db.ref('users/' + myName).on('value', s => {
             const d = s.val() || {};
-            isVerified = d.isVerified || (myName === adminNick);
-            const msgInp = document.getElementById('msg');
-            const authBtn = document.getElementById('auth-btn');
-            authBtn.innerText = "ÇIKIŞ YAP";
-            authBtn.style.color = "#ff4b2b";
-            if(isVerified) {
-                msgInp.disabled = false;
-                msgInp.placeholder = "Mesaj yazın...";
-                loadMessages();
+            myRole = (myName === rootNick) ? "Kurucu" : (d.role || "Misafir");
+            isVerified = d.isVerified || (myName === rootNick);
+
+            document.getElementById('auth-btn').innerText = "ÇIKIŞ";
+            document.getElementById('auth-btn').style.color = "#ff4b2b";
+            
+            const isAdmin = ["Kurucu", "Admin", "Yönetici"].includes(myRole) || myName === rootNick;
+            document.getElementById('admin-link').style.display = isAdmin ? "block" : "none";
+
+            if(isVerified) { 
+                document.getElementById('msg').disabled = false;
+                document.getElementById('msg').placeholder = "Mesajınızı yazın...";
+                loadMessages(); 
             } else {
-                msgInp.disabled = true;
-                msgInp.placeholder = "Onay bekleniyor...";
+                showLocked();
             }
-            uRef.set({ name: myName, color: currentColor, isVerified: isVerified });
-            uRef.onDisconnect().remove();
+            db.ref('presence/' + myName).set({ name: myName, color: d.color || "#ffffff", isVerified: isVerified, role: myRole });
+            db.ref('presence/' + myName).onDisconnect().remove();
         });
     }
 
-    function applyColor(c) {
-        currentColor = c;
-        document.getElementById('current-color-btn').style.background = c;
-        document.getElementById('color-dropdown').style.display = 'none';
-        if(myName) db.ref('presence/' + myName).update({ color: c });
-    }
-
-    function toggleStyle(t) { 
-        if(isEditMode) return;
-        if(t==='bold') { isBold = !isBold; document.getElementById('btn-bold').classList.toggle('active-tool'); }
-        if(t==='italic') { isItalic = !isItalic; document.getElementById('btn-italic').classList.toggle('active-tool'); }
-    }
-
-    // GÜNCELLENEN KISIM: Gelen mesajı yerel boyutta (fontSize) gösterir
     function loadMessages() {
-        if(messageListener) return;
         const win = document.getElementById('chat-window');
-        win.innerHTML = "";
-        messageListener = db.ref('messages').limitToLast(50).on('child_added', s => {
+        db.ref('messages').off();
+        
+        // TEMİZLEME LOGU DİNLEYİCİ
+        db.ref('system_log/clear').on('value', s => {
+            if(s.val()) {
+                win.innerHTML = `<div id="system-clear-msg" class="system-msg">🗑 ${s.val().by} Sohbeti Temizledi</div>`;
+            }
+        });
+
+        // YENİ MESAJ GELDİĞİNDE
+        db.ref('messages').limitToLast(50).on('child_added', s => {
             const d = s.val();
+            
+            // Eğer ekranda temizleme uyarısı varsa onu kaldır
+            const clearMsg = document.getElementById('system-clear-msg');
+            if(clearMsg) clearMsg.remove();
+
             const m = document.createElement('div');
-            m.className = "chat-msg-row"; // CSS kontrolü için class ekledik
+            m.className = "chat-msg-row";
             m.style.cssText = `color:${d.c}; font-weight:${d.b?'bold':'normal'}; font-style:${d.i?'italic':'normal'}; font-size:${fontSize}px; margin-bottom:8px;`;
             m.innerHTML = `<b>${d.u}:</b> ${d.m}`;
             win.prepend(m);
         });
     }
 
+    function clearMsgs() {
+        const isAdmin = ["Kurucu", "Admin", "Yönetici"].includes(myRole) || myName === rootNick;
+        if(!isAdmin) return;
+        if(confirm("Tüm mesajlar silinecek. Onaylıyor musunuz?")) {
+            db.ref('messages').remove();
+            db.ref('system_log/clear').set({ by: myName, time: Date.now() });
+        }
+    }
+
     function loadUsers() {
         db.ref('presence').on('value', s => {
-            const list = document.getElementById('user-list');
-            list.innerHTML = "";
+            const list = document.getElementById('user-list'); list.innerHTML = "";
             s.forEach(u => {
                 const ud = u.val();
                 const div = document.createElement('div');
-                div.className = "online-user " + (ud.isVerified ? "" : "unverified");
-                div.style.color = ud.color || "#00f2ff";
-                let cb = (myName === adminNick && ud.name !== adminNick) ? `<input type="checkbox" onchange="verify('${ud.name}', this.checked)" ${ud.isVerified?'checked':''}>` : "";
-                div.innerHTML = `${cb} ● ${ud.name}`;
-                list.appendChild(div);
+                div.className = "online-user-row";
+                const nameLabel = document.createElement('span');
+                nameLabel.className = "user-name-label " + (ud.isVerified ? "" : "unverified");
+                nameLabel.style.color = ud.color || "#ffffff"; 
+                nameLabel.innerHTML = `● ${ud.name} <small style="opacity:0.4; font-size:9px;">${ud.role || ''}</small>`;
+                
+                const check = document.createElement('input');
+                check.type = "checkbox";
+                check.className = "user-approve-check";
+                check.checked = ud.isVerified;
+                
+                const canVerify = ["Kurucu", "Admin", "Yönetici", "Dj", "Teknik Servis"].includes(myRole) || myName === rootNick;
+                if (!canVerify) check.style.display = "none";
+                
+                check.onchange = (e) => handleVerification(ud.name, e.target.checked);
+                div.appendChild(nameLabel); div.appendChild(check); list.appendChild(div);
             });
         });
     }
 
-    function verify(t, v) { db.ref('users/' + t).update({ isVerified: v }); }
+    async function handleVerification(targetNick, newStatus) {
+        const isAdmin = ["Kurucu", "Admin", "Yönetici"].includes(myRole) || myName === rootNick;
+        if (isAdmin) {
+            if(confirm(`${targetNick} kalıcı olarak güncellensin mi?`)) {
+                await db.ref('users/' + targetNick).update({ isVerified: newStatus });
+                await db.ref('presence/' + targetNick).update({ isVerified: newStatus });
+            } else location.reload();
+        } else {
+            if(confirm(`${targetNick} geçici olarak güncellensin mi?`)) await db.ref('presence/' + targetNick).update({ isVerified: newStatus });
+            else location.reload();
+        }
+    }
 
-    window.oncontextmenu = (e) => {
-        if(myName !== adminNick) return;
-        e.preventDefault();
-        const m = document.getElementById('context-menu');
-        m.style.display = 'block'; m.style.left = e.clientX + 'px'; m.style.top = e.clientY + 'px';
+    function handleAuth() { 
+        if(myName) { if(confirm("Çıkış yapmak istediğinize emin misiniz?")) { localStorage.removeItem("filiz_chat_nick"); sessionStorage.removeItem("filiz_chat_nick"); location.reload(); } } 
+        else { document.getElementById('login-modal').style.display = 'flex'; } 
+    }
+
+    function applyColor(c) {
+        currentColor = c; document.getElementById('current-color-btn').style.background = c;
+        if(myName) db.ref('users/' + myName).update({ color: c });
+    }
+
+    function changeFontSize(delta) { 
+        fontSize = Math.max(10, Math.min(30, fontSize + delta)); 
+        document.querySelectorAll('.chat-msg-row').forEach(m => m.style.fontSize = fontSize + "px");
+    }
+
+    function togglePanel(id) { const t = document.getElementById(id); t.style.display = (t.style.display === 'flex') ? 'none' : 'flex'; }
+    function toggleStyle(t) { 
+        if(t==='bold') { isBold=!isBold; document.getElementById('btn-bold').classList.toggle('active-tool'); }
+        if(t==='italic') { isItalic=!isItalic; document.getElementById('btn-italic').classList.toggle('active-tool'); }
+    }
+
+    document.getElementById('msg').onkeypress = (e) => {
+        if(e.key === "Enter" && isVerified && e.target.value.trim() !== "") {
+            db.ref('messages').push().set({ u: myName, m: e.target.value, c: currentColor, b: isBold, i: isItalic });
+            e.target.value = "";
+        }
     };
 
+    // SAĞ TIK MENÜSÜ KONTROLÜ
+    window.oncontextmenu = (e) => { 
+        const isAuth = ["Kurucu", "Admin", "Yönetici"].includes(myRole) || myName === rootNick;
+        if(!isAuth) return;
+        
+        e.preventDefault(); 
+        const m = document.getElementById('context-menu');
+        m.style.display = 'block'; 
+        m.style.left = e.clientX + 'px'; 
+        m.style.top = e.clientY + 'px'; 
+    };
     window.onclick = () => document.getElementById('context-menu').style.display = 'none';
 
     function setEditMode(type) {
-        isEditMode = true;
         document.getElementById('main-body').className = "edit-mode-active mode-" + type;
         draggies.forEach(d => d.destroy()); draggies = [];
         widgetIds.forEach(id => {
@@ -219,40 +295,42 @@
             if(type === 'move') {
                 const d = new Draggabilly(el);
                 d.on('dragEnd', function() { 
-                    db.ref('layout/'+id).update({ x: this.position.x, y: this.position.y }); 
-                    el.style.transform="none"; el.style.left=this.position.x+"px"; el.style.top=this.position.y+"px";
+                    db.ref('layout/'+id).update({ x: this.position.x, y: this.position.y });
+                    el.style.transform = "none"; el.style.left = this.position.x + "px"; el.style.top = this.position.y + "px";
                 });
                 draggies.push(d);
-            }
-            if(type === 'resize') {
-                const ro = new ResizeObserver(() => { if(isEditMode) db.ref('layout/'+id).update({ w: el.offsetWidth, h: el.offsetHeight }); });
-                ro.observe(el);
             }
         });
     }
 
-    function saveAndLock() { document.getElementById('toast').style.display="block"; setTimeout(()=>location.reload(), 1000); }
-    function loadLayout() { db.ref('layout').once('value', s => { const d = s.val() || {}; widgetIds.forEach(id => { const el = document.getElementById(id); if(d[id]) { el.style.left=d[id].x+"px"; el.style.top=d[id].y+"px"; el.style.width=d[id].w+"px"; el.style.height=d[id].h+"px"; } }); }); }
-    function showLocked() { document.getElementById('chat-window').innerHTML = "<div style='padding:20px; text-align:center; color:#ff4b2b; font-size:12px;'>⚠️ Sohbet Kilitli.</div>"; }
-    function handleAuth() { if(myName) { if(confirm("Çıkış?")) { sessionStorage.removeItem("filiz_chat_nick"); location.reload(); } } else { document.getElementById('login-modal').style.display='flex'; } }
-    function confirmLogin() { const v = document.getElementById('nick-input').value.trim(); if(v) { sessionStorage.setItem("filiz_chat_nick", v); location.reload(); } }
-    function clearMsgs() { if(confirm("Temizle?")) db.ref('messages').remove(); }
-    db.ref('messages').on('child_removed', () => document.getElementById('chat-window').innerHTML = "");
+    function saveAndLock() { 
+        widgetIds.forEach(id => {
+            const el = document.getElementById(id);
+            db.ref('layout/'+id).update({ w: el.offsetWidth, h: el.offsetHeight });
+        });
+        document.getElementById('toast').style.display="block"; setTimeout(()=>location.reload(), 800); 
+    }
 
-    // GÜNCELLENEN KISIM: 's: fontSize' veritabanına gönderilmiyor
-    document.getElementById('msg').onkeypress = (e) => {
-        if(e.key === "Enter" && isVerified && e.target.value.trim() !== "") {
-            db.ref('messages').push().set({ 
-                u: myName, 
-                m: e.target.value, 
-                c: currentColor, 
-                b: isBold, 
-                i: isItalic 
-                // s (size) bilgisini sildik
-            });
-            e.target.value = "";
-        }
-    };
+    function loadLayout() { 
+        db.ref('layout').once('value', s => { 
+            const d = s.val() || {}; 
+            widgetIds.forEach(id => { 
+                const el = document.getElementById(id); 
+                if(d[id]) { 
+                    el.style.left=d[id].x+"px"; el.style.top=d[id].y+"px"; 
+                    el.style.width=d[id].w+"px"; el.style.height=d[id].h+"px"; 
+                } 
+            }); 
+        }); 
+    }
+
+    function showLocked() { 
+        document.getElementById('chat-window').innerHTML = `
+            <div class="join-warn">
+                ⚠️ Sohbete katılmak için lütfen nick ile giriş yapınız.<br>
+                <small>(Nickiniz onaysız ise lütfen DJ'den onay bekleyin.)</small>
+            </div>`; 
+    }
 </script>
 </body>
 </html>

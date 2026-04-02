@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Yönetim Paneli - v52</title>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0b; color: #fff; padding: 20px; }
+        .container { max-width: 1100px; margin: 0 auto; background: #141416; padding: 25px; border-radius: 15px; border: 1px solid #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { text-align: left; background: #1a1a1c; padding: 15px; color: #00f2ff; font-size: 13px; border-bottom: 2px solid #333; }
+        td { padding: 12px; border-bottom: 1px solid #1f1f21; }
+        input, select { background: #000; color: #00f2ff; border: 1px solid #333; padding: 8px; border-radius: 5px; outline: none; }
+        button.del-btn { background: #ff4b2b; color: #fff; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        .rename-btn { color: #ffff00; cursor: pointer; margin-right: 10px; font-size: 18px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2 style="color:#00f2ff; text-align:center;">👥 KULLANICI & RÜTBE YÖNETİMİ</h2>
+    <table>
+        <thead>
+            <tr><th>Nick / Düzenle</th><th>Şifre</th><th>Onay</th><th>Rütbe</th><th>İşlem</th></tr>
+        </thead>
+        <tbody id="user-list"></tbody>
+    </table>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyBeMsSLTbpmjzd7HrVKjhFIVAQ_goJsLUg",
+        authDomain: "flat-chat-fa830.firebaseapp.com",
+        databaseURL: "https://flat-chat-fa830-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "flat-chat-fa830",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const myName = sessionStorage.getItem("filiz_chat_nick") || "";
+    let myRole = "";
+
+    if (myName) {
+        db.ref('users/' + myName).once('value', s => {
+            myRole = s.val()?.role || "Misafir";
+            load();
+        });
+    }
+
+    function load() {
+        const canEdit = ["Kurucu", "Admin", "Yönetici"].includes(myRole);
+        db.ref('users').on('value', s => {
+            const list = document.getElementById('user-list');
+            list.innerHTML = "";
+            s.forEach(user => {
+                const nick = user.key;
+                const d = user.val();
+                const roles = ["Kurucu", "Admin", "Yönetici", "Teknik Servis", "Dj", "Üye", "Misafir"];
+                let roleOpts = roles.map(r => `<option value="${r}" ${d.role===r?'selected':''}>${r}</option>`).join("");
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color:${d.color || '#00f2ff'}">
+                        <span class="rename-btn" onclick="renameUser('${nick}')" title="İsim Değiştir">✏️</span>
+                        <b>${nick}</b>
+                    </td>
+                    <td><input type="text" value="${d.password||''}" ${!canEdit?'disabled':''} onchange="db.ref('users/${nick}').update({password:this.value})"></td>
+                    <td>
+                        <select ${!canEdit?'disabled':''} onchange="db.ref('users/${nick}').update({isVerified:this.value==='true'})">
+                            <option value="false" ${!d.isVerified?'selected':''}>ONAYSIZ</option>
+                            <option value="true" ${d.isVerified?'selected':''}>ONAYLI</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select ${!canEdit?'disabled':''} onchange="db.ref('users/${nick}').update({role:this.value})">
+                            ${roleOpts}
+                        </select>
+                    </td>
+                    <td><button class="del-btn" ${!canEdit?'style="display:none"':''} onclick="if(confirm('Silinsin mi?')) db.ref('users/${nick}').remove()">SİL</button></td>
+                `;
+                list.appendChild(tr);
+            });
+        });
+    }
+
+    async function renameUser(oldNick) {
+        if(!["Kurucu", "Admin", "Yönetici"].includes(myRole)) return;
+        const newNick = prompt(`${oldNick} için yeni nick girin:`, oldNick);
+        if (!newNick || newNick === oldNick) return;
+
+        const check = await db.ref('users/' + newNick).once('value');
+        if (check.exists()) { alert("Bu nick zaten kullanımda!"); return; }
+
+        const data = (await db.ref('users/' + oldNick).once('value')).val();
+        await db.ref('users/' + newNick).set(data);
+        await db.ref('users/' + oldNick).remove();
+        await db.ref('presence/' + oldNick).remove();
+        
+        alert("Nick başarıyla taşındı.");
+    }
+</script>
+</body>
+</html>
