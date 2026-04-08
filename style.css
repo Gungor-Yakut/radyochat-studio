@@ -246,8 +246,19 @@ body {
 }
 .tick-f { background: #00f2ff !important; color: #000 !important; border-color: #00f2ff; } /* Kalıcı F */
 .tick-v { color: #00fc00; border-color: #00fc00; } /* Geçici Tik */
-.unverified-text { text-decoration: line-through !important; opacity: 0.4; filter: grayscale(1); } /* Onaysızlar */
+/* Onayı (F veya ✓) olmayan herkesin ismini bu hale getirir */
+.unverified-text { 
+    text-decoration: line-through !important; /* Üzerini çiz */
+    opacity: 0.5;                             /* Biraz şeffaf yap */
+    filter: grayscale(1);                     /* Renklerini soldur */
+    pointer-events: none;                     /* Tıklanmasını engellemek istersen ekle */
+}
 
+/* Onaylı olanların normal görünmesi için (Güvenlik önlemi) */
+.user-name-label {
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
 /* Widget Temel Yapısı - Kaymayı Engelleyen Kesin Çözüm */
 .widget {
     position: absolute !important;
