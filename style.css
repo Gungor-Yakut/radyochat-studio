@@ -247,17 +247,28 @@ body {
 .tick-f { background: #00f2ff !important; color: #000 !important; border-color: #00f2ff; } /* Kalıcı F */
 .tick-v { color: #00fc00; border-color: #00fc00; } /* Geçici Tik */
 /* Onayı (F veya ✓) olmayan herkesin ismini bu hale getirir */
+/* Onaysız (Guest veya Şifresiz) Kullanıcı Stili */
 .unverified-text { 
     text-decoration: line-through !important; /* Üzerini çiz */
-    opacity: 0.5;                             /* Biraz şeffaf yap */
-    filter: grayscale(1);                     /* Renklerini soldur */
-    pointer-events: none;                     /* Tıklanmasını engellemek istersen ekle */
+    opacity: 0.6 !important;                 /* Hafif şeffaf (kaybolmayacak kadar) */
+    color: #ff4b2b !important;               /* Kırmızımtırak ton */
 }
 
-/* Onaylı olanların normal görünmesi için (Güvenlik önlemi) */
+/* Online Listesi Satır Düzeni */
+.online-user-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
 .user-name-label {
-    text-decoration: none;
-    transition: all 0.3s ease;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Çok uzun isimleri keser */
 }
 /* Widget Temel Yapısı - Kaymayı Engelleyen Kesin Çözüm */
 .widget {
