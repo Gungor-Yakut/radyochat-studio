@@ -89,8 +89,8 @@
     <div class="widget" id="online-widget"><div id="user-list"></div></div>
 </div>
 
-<div class="widget" id="count-widget">
-    <div class="user-count-box"> Dinleyici: <span id="total-user-count">0</span></div>
+<div class="widget" id="count-widget" style="width:200px; height:40px; top:10px; left:420px; opacity:1;">
+    <div class="user-count-box">Dinleyici: <span id="total-user-count">0</span></div>
 </div>
 
 <button id="btn-ban-list" onclick="toggleBanList()" style="display:none; position: fixed; top: 10px; right: 10px; z-index: 9999; background:rgba(255, 75, 43, 0.8); border:1px solid #ff4b2b; color:#fff; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; box-shadow: 0 0 10px rgba(255,75,43,0.5);">BANLILAR</button>
@@ -144,7 +144,7 @@
             sessionStorage.setItem("filiz_chat_nick", myName);
         }
         startAuth(); 
-        startCounter(); // Sayacı başlat
+startCounter(); // Sayacı başlat
     };
 
     function loadMessages() {
@@ -218,8 +218,7 @@
         } 
     };
 
-
-    // Dinleyici Sayısını Dinleyen Fonksiyon
+// Dinleyici Sayısını Dinleyen Fonksiyon
     function startCounter() {
         const countRef = db.ref('presence');
         
@@ -233,7 +232,7 @@
             }
         });
     }
-    
+
     function loadLayout() {
         db.ref('layout').once('value', s => {
             const d = s.val() || {};
@@ -322,6 +321,30 @@
     });
 }
 
+
+ function setupPresence(uid) {
+    // Kullanıcının online olduğu konum
+    const userStatusRef = db.ref('presence/' + uid);
+
+    // Firebase'in özel .info/connected yolu: Bağlantı durumunu kontrol eder
+    db.ref('.info/connected').on('value', (snapshot) => {
+        if (snapshot.val() === false) {
+            return; // Bağlantı yoksa bir şey yapma
+        }
+
+        // Bağlantı koptuğunda (tarayıcı kapandığında) yapılacak işlem:
+        // Sunucuya "benim verimi SİL" talimatı veriyoruz
+        userStatusRef.onDisconnect().remove().then(() => {
+            // Bağlantı şu an aktif, online verisini yazalım
+            userStatusRef.set({
+                name: uid,
+                role: myRole,
+                color: currentColor,
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
+        });
+    });
+}
     function loadUsers() {
     db.ref('presence').on('value', s => {
         const list = document.getElementById('user-list'); 
