@@ -276,11 +276,7 @@ body {
     height: 100%;
 }
 
-#total-user-count {
-    margin-left: 5px;
-    color: #fff; /* Sayı beyaz görünsün */
-    text-shadow: 0 0 10px #00f2ff; /* Sayıya neon parlama verir */
-}
+
 
 .menu-danger { color: #ff4b2b !important; }
 .menu-success { color: #00fc00 !important; }
