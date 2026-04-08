@@ -2,101 +2,328 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Yönetim Paneli - v52</title>
+    <title>Yönetim Paneli - Kesin Yetki Kontrolü</title>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0a0a0b; color: #fff; padding: 20px; }
-        .container { max-width: 1100px; margin: 0 auto; background: #141416; padding: 25px; border-radius: 15px; border: 1px solid #333; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { text-align: left; background: #1a1a1c; padding: 15px; color: #00f2ff; font-size: 13px; border-bottom: 2px solid #333; }
-        td { padding: 12px; border-bottom: 1px solid #1f1f21; }
-        input, select { background: #000; color: #00f2ff; border: 1px solid #333; padding: 8px; border-radius: 5px; outline: none; }
-        button.del-btn { background: #ff4b2b; color: #fff; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
-        .rename-btn { color: #ffff00; cursor: pointer; margin-right: 10px; font-size: 18px; }
+        :root { --neon: #00f2ff; --bg: #0a0a0b; --card: #141416; --border: #333; --danger: #ff4b2b; --success: #00fc00; --warning: #ffcc00; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .tab-btn { background: #1a1a1c; border: none; color: #888; padding: 10px 18px; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 12px; }
+        .tab-btn.active { background: var(--neon); color: #000; box-shadow: 0 0 10px var(--neon); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .table-container { background: var(--card); border-radius: 10px; border: 1px solid var(--border); overflow-x: auto; margin-bottom: 25px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+        th, td { padding: 10px 8px; border: 1px solid #1f1f21; text-align: center; font-size: 12px; }
+        th { background: #1a1a1c; color: var(--neon); white-space: nowrap; }
+        
+        /* Yetki Tablosu İkinci Seviye Tab Menü */
+        .perm-tabs { display: flex; gap: 5px; margin: 10px 0; background: #000; padding: 5px; border-radius: 8px; width: fit-content; }
+        .perm-tab-btn { background: transparent; border: none; color: #666; padding: 8px 15px; cursor: pointer; border-radius: 5px; font-size: 11px; font-weight: bold; }
+        .perm-tab-btn.active { background: #222; color: var(--neon); }
+
+        input[type="text"], input[type="number"], input[type="password"] { background: #000; color: #fff; border: 1px solid var(--border); padding: 6px; border-radius: 4px; text-align: center; }
+        .btn-action { border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 10px; margin: 2px; }
+        .btn-save { background: var(--success); color: #000; }
+        .btn-delete { background: var(--danger); color: #fff; }
+        .btn-warning { background: var(--warning); color: #000; }
+        .whitelist-add-box { padding: 15px; background: rgba(0,242,255,0.05); border-radius: 8px; margin-bottom: 15px; border: 1px dashed var(--neon); }
+        #perm-matrix-table td:first-child { text-align: left; font-weight: bold; position: sticky; left: 0; background: #141416; border-right: 2px solid #222; min-width: 200px; }
+        input[type="checkbox"] { cursor: pointer; transform: scale(1.2); accent-color: var(--neon); }
+        .sub-perm-label { color: #aaa; padding-left: 20px !important; }
+.hidden { display: none !important; }
     </style>
 </head>
 <body>
-<div class="container">
-    <h2 style="color:#00f2ff; text-align:center;">👥 KULLANICI & RÜTBE YÖNETİMİ</h2>
-    <table>
-        <thead>
-            <tr><th>Nick / Düzenle</th><th>Şifre</th><th>Onay</th><th>Rütbe</th><th>İşlem</th></tr>
-        </thead>
-        <tbody id="user-list"></tbody>
-    </table>
+
+    <div class="tabs">
+    <button class="tab-btn active" id="tab-users" onclick="openTab('users-tab', this)">👤 KULLANICI YÖNETİMİ</button>
+    <button class="tab-btn" id="tab-roles" onclick="openTab('roles-tab', this)">🏆 RÜTBE AYARLARI</button>
+    <button class="tab-btn" id="tab-perms" onclick="openTab('perms-tab', this)">🔐 YETKİ TABLOSU</button>
+    <button class="tab-btn" id="tab-ip" onclick="openTab('ip-tab', this)">🌐 IP GÜNLÜĞÜ</button>
+    <button class="tab-btn" id="tab-ban-manage" style="border: 1px solid var(--danger);" onclick="openTab('ban-manage-tab', this)">🚫 BAN YÖNETİMİ</button>
 </div>
 
+    <div id="users-tab" class="tab-content active">
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Mevcut Nick</th><th>Yeni Nick</th><th>Şifre</th><th>Onay (F)</th><th>Rütbe</th><th>İşlemler</th></tr></thead>
+                <tbody id="user-list"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="roles-tab" class="tab-content">
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Sıra</th><th>Rütbe Adı</th><th>Renk Seç</th><th>Renk Kodu</th><th>İşlem</th></tr></thead>
+                <tbody id="role-list-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="perms-tab" class="tab-content">
+        <div style="background: rgba(0,242,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--neon);">
+            <h3 style="margin:0; color:var(--neon);">🛡️ GELİŞMİŞ YETKİ MATRİSİ</h3>
+            <div class="perm-tabs">
+                <button class="perm-tab-btn active" onclick="filterPerms('Sohbet_Yetkileri', this)">SOHBET (INDEX) YETKİLERİ</button>
+                <button class="perm-tab-btn" onclick="filterPerms('Panel_Yetkileri', this)">ADMİN PANEL YETKİLERİ</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <table id="perm-matrix-table">
+                <thead><tr id="perm-header-row"><th>YETKİ TANIMI</th></tr></thead>
+                <tbody id="perm-matrix-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="ip-tab" class="tab-content">
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Nick</th><th>IP Adresi</th><th>Son Görülme</th><th>Durum</th><th>İşlem</th></tr></thead>
+                <tbody id="ip-list-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="ban-manage-tab" class="tab-content">
+        <div class="whitelist-add-box">
+            <h3 style="margin-top:0; color:var(--neon);">🛡️ GÜVENLİ LİSTE EKLE (BANLANAMAZLAR)</h3>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="white-ip" placeholder="IP Adresi" style="flex:1;">
+                <input type="text" id="white-desc" placeholder="Kimin IP'si?" style="flex:1;">
+                <button class="btn-action btn-save" onclick="addToWhitelist()">LİSTEYE EKLE</button>
+            </div>
+        </div>
+        <div class="table-container">
+            <h3 style="padding: 10px; color:var(--danger);">🚫 YASAKLI IP'LER</h3>
+            <table id="ban-table"><thead><tr><th>Nick</th><th>IP</th><th>Tarih</th><th>İşlem</th></tr></thead><tbody id="ban-list-body"></tbody></table>
+        </div>
+        <div class="table-container">
+            <h3 style="padding: 10px; color:var(--success);">✅ GÜVENLİ LİSTE</h3>
+            <table id="white-table"><thead><tr><th>Açıklama</th><th>IP</th><th>İşlem</th></tr></thead><tbody id="white-list-body"></tbody></table>
+        </div>
+    </div>
+
 <script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyBeMsSLTbpmjzd7HrVKjhFIVAQ_goJsLUg",
-        authDomain: "flat-chat-fa830.firebaseapp.com",
-        databaseURL: "https://flat-chat-fa830-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "flat-chat-fa830",
-    };
+    const firebaseConfig = { apiKey: "AIzaSyBeMsSLTbpmjzd7HrVKjhFIVAQ_goJsLUg", authDomain: "flat-chat-fa830.firebaseapp.com", databaseURL: "https://flat-chat-fa830-default-rtdb.europe-west1.firebasedatabase.app", projectId: "flat-chat-fa830" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const myName = sessionStorage.getItem("filiz_chat_nick") || "";
-    let myRole = "";
 
-    if (myName) {
-        db.ref('users/' + myName).once('value', s => {
-            myRole = s.val()?.role || "Misafir";
-            load();
+    let myName = localStorage.getItem("filiz_chat_nick") || "Filiz Yeşili FM";
+    let myPerms = { viewPass: true }; // Kurucu için varsayılan şifre görme açık
+    let roleList = [];
+    let currentPermGroup = "Sohbet_Yetkileri";
+
+    const permissionGroups = {
+        Sohbet_Yetkileri: [
+            { key: "canLogin", label: "Giriş Yapabilir" },
+            { key: "canSeeChat", label: "Sohbeti Görebilir" },
+            { key: "canWrite", label: "Mesaj Yazabilir" },
+            { key: "canUseColors", label: "Renkli Yazı" },
+            { key: "canBan", label: "Banlama (Buton & Widget)" },
+            { key: "canKick", label: "Sohbetten Atma" },
+            { key: "canEditLayout", label: "Düzenleme Modu (Taşı/Kaydet)" },
+            { key: "canVerifyF", label: "F / Kalıcı Onay" },
+            { key: "canVerifyTemp", label: "Geçici Onay" },
+            { key: "canClearChat", label: "Sohbet Temizleme" }
+        ],
+        Panel_Yetkileri: [
+            { key: "canAccessAdmin", label: "🛡️ Admin Panel Giriş" },
+            { key: "manageUsers", label: "👤 Kullanıcı Yönetimi" },
+            { key: "manageRoles", label: "🎭 Rütbe Ayarları" },
+            { key: "managePerms", label: "🔐 Yetki Tablosu" },
+            { key: "viewIpLog", label: "🌐 İp Günlüğü" },
+            { key: "manageBans", label: "🚫 Ban Yönetimi" },
+            { key: "editNick", label: "➜ Nick Değişikliği", isSub: true },
+            { key: "viewPass", label: "➜ Şifre Görme", isSub: true },
+            { key: "editVerifyF", label: "➜ Onay (F) Değişikliği", isSub: true },
+            { key: "editUserRole", label: "➜ Rütbe Değişikliği", isSub: true },
+            { key: "deleteUser", label: "➜ Kullanıcı Silme", isSub: true }
+        ]
+    };
+
+    function updateP(rütbeAdi, folder, yetkiAnahtari, deger) { 
+        db.ref(`permissions/${rütbeAdi}/${folder}/${yetkiAnahtari}`).set(deger); 
+    }
+
+    async function checkMyPerms() {
+    const userSnap = await db.ref('users/' + myName).once('value');
+    const userData = userSnap.val() || {};
+    const myRole = (userData.role === "Kurucu" || myName === "Filiz Yeşili FM") ? "Kurucu" : (userData.role || "");
+    
+    // Yetkileri Çek
+    let perms;
+    if (myRole === "Kurucu") {
+        // Kurucu her şeyi görür
+        perms = { 
+            canAccessAdmin: true, manageUsers: true, manageRoles: true, 
+            managePerms: true, viewIpLog: true, manageBans: true,
+            editNick: true, viewPass: true, editVerifyF: true, 
+            editUserRole: true, deleteUser: true 
+        };
+    } else {
+        const pSnap = await db.ref('permissions/' + myRole + '/Panel_Yetkileri').once('value');
+        perms = pSnap.val() || {};
+    }
+    
+    myPerms = perms; // Global değişkene aktar
+    applyUIPermissions(perms); // Arayüzü yetkilere göre düzenle
+    init(); // Sayfayı yükle
+}
+
+function applyUIPermissions(p) {
+    // 1. ANA MENÜ TABLARI KONTROLÜ
+    // Eğer 'canAccessAdmin' yoksa zaten buraya girmemeli ama biz yine de ana tabları gizleyelim
+    toggleElement('tab-users', p.manageUsers);
+    toggleElement('tab-roles', p.manageRoles);
+    toggleElement('tab-perms', p.managePerms);
+    toggleElement('tab-ip', p.viewIpLog);
+    toggleElement('tab-ban-manage', p.manageBans);
+
+    // Eğer kişinin girdiği ilk tab (Kullanıcı Yönetimi) kapalıysa, açık olan ilk tabı göster
+    if (!p.manageUsers) {
+        if (p.manageRoles) openTab('roles-tab', document.getElementById('tab-roles'));
+        else if (p.managePerms) openTab('perms-tab', document.getElementById('tab-perms'));
+    }
+}
+
+// Element gizleme/gösterme yardımcı fonksiyonu
+function toggleElement(id, hasPerm) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (hasPerm) el.classList.remove('hidden');
+    else el.classList.add('hidden');
+}
+
+    function init() {
+        db.ref('role_settings').on('value', rSnap => {
+            const roles = rSnap.val() || {};
+            roleList = Object.keys(roles).sort((a,b) => (roles[a].order || 99) - (roles[b].order || 99));
+            renderRoles(roles, roleList);
+            db.ref('permissions').on('value', pSnap => renderPerms(roleList, pSnap.val() || {}, roles));
+            loadUsers(); loadIPLogs(); loadBanManagement();
         });
     }
 
-    function load() {
-        const canEdit = ["Kurucu", "Admin", "Yönetici"].includes(myRole);
-        db.ref('users').on('value', s => {
-            const list = document.getElementById('user-list');
-            list.innerHTML = "";
-            s.forEach(user => {
-                const nick = user.key;
-                const d = user.val();
-                const roles = ["Kurucu", "Admin", "Yönetici", "Teknik Servis", "Dj", "Üye", "Misafir"];
-                let roleOpts = roles.map(r => `<option value="${r}" ${d.role===r?'selected':''}>${r}</option>`).join("");
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="color:${d.color || '#00f2ff'}">
-                        <span class="rename-btn" onclick="renameUser('${nick}')" title="İsim Değiştir">✏️</span>
-                        <b>${nick}</b>
-                    </td>
-                    <td><input type="text" value="${d.password||''}" ${!canEdit?'disabled':''} onchange="db.ref('users/${nick}').update({password:this.value})"></td>
-                    <td>
-                        <select ${!canEdit?'disabled':''} onchange="db.ref('users/${nick}').update({isVerified:this.value==='true'})">
-                            <option value="false" ${!d.isVerified?'selected':''}>ONAYSIZ</option>
-                            <option value="true" ${d.isVerified?'selected':''}>ONAYLI</option>
-                        </select>
-                    </td>
-                    <td>
-                        <select ${!canEdit?'disabled':''} onchange="db.ref('users/${nick}').update({role:this.value})">
-                            ${roleOpts}
-                        </select>
-                    </td>
-                    <td><button class="del-btn" ${!canEdit?'style="display:none"':''} onclick="if(confirm('Silinsin mi?')) db.ref('users/${nick}').remove()">SİL</button></td>
-                `;
-                list.appendChild(tr);
+    function filterPerms(group, btn) {
+        currentPermGroup = group;
+        document.querySelectorAll('.perm-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        db.ref('permissions').once('value', pSnap => {
+            db.ref('role_settings').once('value', rSnap => {
+                renderPerms(roleList, pSnap.val() || {}, rSnap.val() || {});
             });
         });
     }
 
-    async function renameUser(oldNick) {
-        if(!["Kurucu", "Admin", "Yönetici"].includes(myRole)) return;
-        const newNick = prompt(`${oldNick} için yeni nick girin:`, oldNick);
-        if (!newNick || newNick === oldNick) return;
-
-        const check = await db.ref('users/' + newNick).once('value');
-        if (check.exists()) { alert("Bu nick zaten kullanımda!"); return; }
-
-        const data = (await db.ref('users/' + oldNick).once('value')).val();
-        await db.ref('users/' + newNick).set(data);
-        await db.ref('users/' + oldNick).remove();
-        await db.ref('presence/' + oldNick).remove();
+    function renderPerms(roleKeys, allPerms, roles) {
+        const h = document.getElementById('perm-header-row'); 
+        const b = document.getElementById('perm-matrix-body');
+        h.innerHTML = '<th>YETKİ TANIMI</th>' + roleKeys.map(r => `<th style="color:${roles[r]?.color}">${r.toUpperCase()}</th>`).join('');
         
-        alert("Nick başarıyla taşındı.");
+        let html = "";
+        permissionGroups[currentPermGroup].forEach(p => {
+            let rowClass = p.isSub ? "sub-perm-label" : "";
+            html += `<tr><td class="${rowClass}">${p.label}</td>`;
+            roleKeys.forEach(r => {
+                const isK = (r === "Kurucu");
+                const val = isK ? true : (allPerms[r] && allPerms[r][currentPermGroup] && allPerms[r][currentPermGroup][p.key] === true);
+                html += `<td><input type="checkbox" ${val ? 'checked' : ''} ${isK ? 'disabled' : ''} onchange="updateP('${r}','${currentPermGroup}','${p.key}',this.checked)"></td>`;
+            });
+            html += `</tr>`;
+        });
+        b.innerHTML = html;
     }
+
+    function loadUsers() {
+    db.ref('users').on('value', s => {
+        const list = document.getElementById('user-list'); list.innerHTML = "";
+        s.forEach(u => {
+            const n = u.key; const d = u.val();
+            let ops = roleList.map(k => `<option value="${k}" ${d.role===k?'selected':''}>${k}</option>`).join('');
+            
+            // Alt Yetki Kontrolleri
+            const nickInput = myPerms.editNick ? `<input type="text" value="${n}" id="un-${n}">` : `<b>${n}</b>`;
+            const passInput = myPerms.viewPass ? `<input type="text" value="${d.password || ''}" id="up-${n}">` : `****`;
+            const verifySelect = myPerms.editVerifyF ? `<select id="uv-${n}"><option value="true" ${d.isVerified?'selected':''}>ONAYLI (F)</option><option value="false" ${!d.isVerified?'selected':''}>ONAYSIZ</option></select>` : (d.isVerified ? 'ONAYLI' : 'ONAYSIZ');
+            const roleSelect = myPerms.editUserRole ? `<select id="ur-${n}">${ops}</select>` : `<b>${d.role}</b>`;
+            const deleteBtn = myPerms.deleteUser ? `<button class="btn-action btn-delete" onclick="deleteUser('${n}')">SİL</button>` : "";
+            const saveBtn = (myPerms.editNick || myPerms.viewPass || myPerms.editVerifyF || myPerms.editUserRole) ? `<button class="btn-action btn-save" onclick="saveU('${n}')">KAYDET</button>` : "";
+
+            list.innerHTML += `<tr>
+                <td style="color:${d.color || '#fff'}"><b>${n}</b></td>
+                <td>${nickInput}</td>
+                <td>${passInput}</td>
+                <td>${verifySelect}</td>
+                <td>${roleSelect}</td>
+                <td>${saveBtn} ${deleteBtn}</td>
+            </tr>`;
+        });
+    });
+}
+
+    function addToWhitelist() {
+        const ip = document.getElementById('white-ip').value.trim();
+        const desc = document.getElementById('white-desc').value.trim();
+        if(ip && desc) {
+            db.ref('whitelist/'+ip.replace(/\./g,'_')).set({ip, desc}).then(() => {
+                alert("Güvenli listeye eklendi!");
+                document.getElementById('white-ip').value = "";
+                document.getElementById('white-desc').value = "";
+            });
+        } else { alert("Lütfen IP ve Açıklama girin!"); }
+    }
+
+    // Diğer yardımcı fonksiyonlar (saveU, deleteUser, loadIPLogs, loadBanManagement, removeBan, removeWhite, openTab)
+    async function saveU(oldN) {
+        const newN = document.getElementById('un-'+oldN).value.trim();
+        const p = document.getElementById('up-'+oldN).value;
+        const v = document.getElementById('uv-'+oldN).value === 'true';
+        let r = document.getElementById('ur-'+oldN).value;
+        const snap = await db.ref('users/'+oldN).once('value');
+        const data = snap.val() || {};
+        data.password = p; data.isVerified = v; data.role = r;
+        if(newN !== oldN) { await db.ref('users/'+newN).set(data); await db.ref('users/'+oldN).remove(); }
+        else { await db.ref('users/'+oldN).update(data); }
+        alert("Güncellendi!");
+    }
+    async function deleteUser(n) { if(confirm(n + " silinsin mi?")) await db.ref('users/'+n).remove(); }
+    function loadIPLogs() {
+        db.ref('user_registry').on('value', s => {
+            const list = document.getElementById('ip-list-body'); list.innerHTML = "";
+            s.forEach(u => {
+                const d = u.val(); const isOnline = (d.last_seen && (Date.now() - d.last_seen < 600000));
+                list.innerHTML += `<tr><td>${u.key}</td><td>${d.last_ip || '---'}</td><td>${new Date(d.last_seen).toLocaleString()}</td><td>${isOnline ? '<b style="color:var(--success)">AKTİF</b>' : 'Çevrimdışı'}</td><td><button class="btn-action btn-delete" onclick="banUser('${d.last_ip}', '${u.key}')">BAN</button></td></tr>`;
+            });
+        });
+    }
+    async function banUser(ip, nick) {
+        if(!ip || ip === "---") return alert("IP yok!");
+        const safeIp = ip.replace(/\./g, '_');
+        if(confirm(nick + " yasaklansın mı?")) { await db.ref('banned_ips/' + safeIp).set({ nick: nick, date: Date.now() }); alert("Yasaklandı!"); }
+    }
+    function loadBanManagement() {
+        db.ref('banned_ips').on('value', s => {
+            const b = document.getElementById('ban-list-body'); b.innerHTML = "";
+            s.forEach(i => { b.innerHTML += `<tr><td>${i.val().nick}</td><td>${i.key.replace(/_/g,'.')}</td><td>${new Date(i.val().date).toLocaleDateString()}</td><td><button class="btn-action btn-warning" onclick="removeBan('${i.key}')">KALDIR</button></td></tr>`; });
+        });
+        db.ref('whitelist').on('value', s => {
+            const w = document.getElementById('white-list-body'); w.innerHTML = "";
+            s.forEach(i => { w.innerHTML += `<tr><td>${i.val().desc}</td><td>${i.val().ip}</td><td><button class="btn-action btn-delete" onclick="removeWhite('${i.key}')">SİL</button></td></tr>`; });
+        });
+    }
+    async function removeBan(k) { if(confirm("Kaldırılsın mı?")) await db.ref('banned_ips/'+k).remove(); }
+    async function removeWhite(k) { if(confirm("Silinsin mi?")) await db.ref('whitelist/'+k).remove(); }
+    function renderRoles(data, keys) {
+        document.getElementById('role-list-body').innerHTML = keys.map(k => `<tr><td><input type="number" value="${data[k].order}" id="ord-${k}" style="width:50px;"></td><td style="color:${data[k].color}"><b>${k}</b></td><td><input type="color" value="${data[k].color}" id="cp-${k}" oninput="document.getElementById('hex-${k}').value = this.value"></td><td><input type="text" value="${data[k].color}" id="hex-${k}" style="width:80px;"></td><td><button class="btn-action btn-save" onclick="updateR('${k}')">GÜN.</button></td></tr>`).join('');
+    }
+    async function updateR(n) { await db.ref('role_settings/'+n).update({color:document.getElementById('hex-'+n).value, order:parseInt(document.getElementById('ord-'+n).value)}); alert("Güncellendi!"); }
+    function openTab(id, btn) { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(id).classList.add('active'); btn.classList.add('active'); }
+
+    checkMyPerms();
 </script>
 </body>
 </html>
