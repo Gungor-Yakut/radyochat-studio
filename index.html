@@ -144,6 +144,7 @@
             sessionStorage.setItem("filiz_chat_nick", myName);
         }
         startAuth(); 
+        startCounter(); // Sayacı başlat
     };
 
     function loadMessages() {
@@ -217,6 +218,22 @@
         } 
     };
 
+
+    // Dinleyici Sayısını Dinleyen Fonksiyon
+    function startCounter() {
+        const countRef = db.ref('presence');
+        
+        countRef.on('value', (snapshot) => {
+            // snapshot.numChildren() presence altındaki toplam kayıt sayısını verir
+            const totalUsers = snapshot.numChildren();
+            
+            const countElement = document.getElementById('total-user-count');
+            if (countElement) {
+                countElement.innerText = totalUsers || 0;
+            }
+        });
+    }
+    
     function loadLayout() {
         db.ref('layout').once('value', s => {
             const d = s.val() || {};
