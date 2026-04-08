@@ -17,33 +17,29 @@
         table { width: 100%; border-collapse: collapse; min-width: 1000px; }
         th, td { padding: 10px 8px; border: 1px solid #1f1f21; text-align: center; font-size: 12px; }
         th { background: #1a1a1c; color: var(--neon); white-space: nowrap; }
-        
-        /* Yetki Tablosu İkinci Seviye Tab Menü */
-        .perm-tabs { display: flex; gap: 5px; margin: 10px 0; background: #000; padding: 5px; border-radius: 8px; width: fit-content; }
-        .perm-tab-btn { background: transparent; border: none; color: #666; padding: 8px 15px; cursor: pointer; border-radius: 5px; font-size: 11px; font-weight: bold; }
-        .perm-tab-btn.active { background: #222; color: var(--neon); }
-
         input[type="text"], input[type="number"], input[type="password"] { background: #000; color: #fff; border: 1px solid var(--border); padding: 6px; border-radius: 4px; text-align: center; }
         .btn-action { border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 10px; margin: 2px; }
         .btn-save { background: var(--success); color: #000; }
         .btn-delete { background: var(--danger); color: #fff; }
         .btn-warning { background: var(--warning); color: #000; }
+        .hidden { display: none !important; }
         .whitelist-add-box { padding: 15px; background: rgba(0,242,255,0.05); border-radius: 8px; margin-bottom: 15px; border: 1px dashed var(--neon); }
-        #perm-matrix-table td:first-child { text-align: left; font-weight: bold; position: sticky; left: 0; background: #141416; border-right: 2px solid #222; min-width: 200px; }
+        .sub-tab-content { display: none; animation: fadeIn 0.3s; }
+        .sub-tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #perm-matrix-table td:first-child { text-align: left; font-weight: bold; position: sticky; left: 0; background: #141416; border-right: 2px solid #222; }
         input[type="checkbox"] { cursor: pointer; transform: scale(1.2); accent-color: var(--neon); }
-        .sub-perm-label { color: #aaa; padding-left: 20px !important; }
-.hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <div class="tabs">
-    <button class="tab-btn active" id="tab-users" onclick="openTab('users-tab', this)">👤 KULLANICI YÖNETİMİ</button>
-    <button class="tab-btn" id="tab-roles" onclick="openTab('roles-tab', this)">🏆 RÜTBE AYARLARI</button>
-    <button class="tab-btn" id="tab-perms" onclick="openTab('perms-tab', this)">🔐 YETKİ TABLOSU</button>
-    <button class="tab-btn" id="tab-ip" onclick="openTab('ip-tab', this)">🌐 IP GÜNLÜĞÜ</button>
-    <button class="tab-btn" id="tab-ban-manage" style="border: 1px solid var(--danger);" onclick="openTab('ban-manage-tab', this)">🚫 BAN YÖNETİMİ</button>
-</div>
+        <button class="tab-btn active" onclick="openTab('users-tab', this)">👤 KULLANICI YÖNETİMİ</button>
+        <button class="tab-btn" id="tab-roles" onclick="openTab('roles-tab', this)">🏆 RÜTBE AYARLARI</button>
+        <button class="tab-btn" id="tab-perms" onclick="openTab('perms-tab', this)">🔐 YETKİ TABLOSU</button>
+        <button class="tab-btn" id="tab-ip" onclick="openTab('ip-tab', this)">🌐 IP GÜNLÜĞÜ</button>
+        <button class="tab-btn" id="tab-ban-manage" style="border: 1px solid var(--danger);" onclick="openTab('ban-manage-tab', this)">🚫 BAN YÖNETİMİ</button>
+    </div>
 
     <div id="users-tab" class="tab-content active">
         <div class="table-container">
@@ -64,12 +60,9 @@
     </div>
 
     <div id="perms-tab" class="tab-content">
-        <div style="background: rgba(0,242,255,0.05); padding: 15px; border-radius: 8px; border: 1px solid var(--neon);">
+        <div style="background: rgba(0,242,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--neon);">
             <h3 style="margin:0; color:var(--neon);">🛡️ GELİŞMİŞ YETKİ MATRİSİ</h3>
-            <div class="perm-tabs">
-                <button class="perm-tab-btn active" onclick="filterPerms('Sohbet_Yetkileri', this)">SOHBET (INDEX) YETKİLERİ</button>
-                <button class="perm-tab-btn" onclick="filterPerms('Panel_Yetkileri', this)">ADMİN PANEL YETKİLERİ</button>
-            </div>
+            <p style="font-size:11px; color:#aaa; margin:5px 0 0 0;">* Değişiklikler anında veritabanına işlenir.</p>
         </div>
         <div class="table-container">
             <table id="perm-matrix-table">
@@ -89,21 +82,37 @@
     </div>
 
     <div id="ban-manage-tab" class="tab-content">
-        <div class="whitelist-add-box">
-            <h3 style="margin-top:0; color:var(--neon);">🛡️ GÜVENLİ LİSTE EKLE (BANLANAMAZLAR)</h3>
-            <div style="display: flex; gap: 10px;">
-                <input type="text" id="white-ip" placeholder="IP Adresi" style="flex:1;">
-                <input type="text" id="white-desc" placeholder="Kimin IP'si?" style="flex:1;">
-                <button class="btn-action btn-save" onclick="addToWhitelist()">LİSTEYE EKLE</button>
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #222; padding-bottom: 10px;">
+            <button class="tab-btn active" id="sub-btn-ban" onclick="openSubTab('ban-list-section', this)">🚫 YASAKLI IP'LER</button>
+            <button class="tab-btn" id="sub-btn-white" onclick="openSubTab('white-list-section', this)">✅ GÜVENLİ LİSTE</button>
+        </div>
+
+        <div id="ban-list-section" class="sub-tab-content active">
+            <h3 style="color:var(--danger);">🚫 SİSTEMDEN UZAKLAŞTIRILANLAR</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Nick</th><th>IP</th><th>Tarih</th><th>İşlem</th></tr></thead>
+                    <tbody id="ban-list-body"></tbody>
+                </table>
             </div>
         </div>
-        <div class="table-container">
-            <h3 style="padding: 10px; color:var(--danger);">🚫 YASAKLI IP'LER</h3>
-            <table id="ban-table"><thead><tr><th>Nick</th><th>IP</th><th>Tarih</th><th>İşlem</th></tr></thead><tbody id="ban-list-body"></tbody></table>
-        </div>
-        <div class="table-container">
-            <h3 style="padding: 10px; color:var(--success);">✅ GÜVENLİ LİSTE</h3>
-            <table id="white-table"><thead><tr><th>Açıklama</th><th>IP</th><th>İşlem</th></tr></thead><tbody id="white-list-body"></tbody></table>
+
+        <div id="white-list-section" class="sub-tab-content">
+            <div class="whitelist-add-box">
+                <h3 style="margin-top:0; color:var(--neon);">🛡️ GÜVENLİ LİSTE EKLE (BANLANAMAZLAR)</h3>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="white-ip" placeholder="IP Adresi" style="flex:1;">
+                    <input type="text" id="white-desc" placeholder="Kimin IP'si?" style="flex:1;">
+                    <button class="btn-action btn-save" onclick="addToWhitelist()">LİSTEYE EKLE</button>
+                </div>
+            </div>
+            <h3 style="color:var(--success);">✅ KORUMA ALTINDAKİ IP ADRESLERİ</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Açıklama</th><th>IP</th><th>İşlem</th></tr></thead>
+                    <tbody id="white-list-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -113,90 +122,45 @@
     const db = firebase.database();
 
     let myName = localStorage.getItem("filiz_chat_nick") || "Filiz Yeşili FM";
-    let myPerms = { viewPass: true }; // Kurucu için varsayılan şifre görme açık
-    let roleList = [];
-    let currentPermGroup = "Sohbet_Yetkileri";
+    let myPerms = {}; let roleList = [];
 
-    const permissionGroups = {
-        Sohbet_Yetkileri: [
-            { key: "canLogin", label: "Giriş Yapabilir" },
-            { key: "canSeeChat", label: "Sohbeti Görebilir" },
-            { key: "canWrite", label: "Mesaj Yazabilir" },
-            { key: "canUseColors", label: "Renkli Yazı" },
-            { key: "canBan", label: "Banlama (Buton & Widget)" },
-            { key: "canKick", label: "Sohbetten Atma" },
-            { key: "canEditLayout", label: "Düzenleme Modu (Taşı/Kaydet)" },
-            { key: "canVerifyF", label: "F / Kalıcı Onay" },
-            { key: "canVerifyTemp", label: "Geçici Onay" },
-            { key: "canClearChat", label: "Sohbet Temizleme" }
-        ],
-        Panel_Yetkileri: [
-            { key: "canAccessAdmin", label: "🛡️ Admin Panel Giriş" },
-            { key: "manageUsers", label: "👤 Kullanıcı Yönetimi" },
-            { key: "manageRoles", label: "🎭 Rütbe Ayarları" },
-            { key: "managePerms", label: "🔐 Yetki Tablosu" },
-            { key: "viewIpLog", label: "🌐 İp Günlüğü" },
-            { key: "manageBans", label: "🚫 Ban Yönetimi" },
-            { key: "editNick", label: "➜ Nick Değişikliği", isSub: true },
-            { key: "viewPass", label: "➜ Şifre Görme", isSub: true },
-            { key: "editVerifyF", label: "➜ Onay (F) Değişikliği", isSub: true },
-            { key: "editUserRole", label: "➜ Rütbe Değişikliği", isSub: true },
-            { key: "deleteUser", label: "➜ Kullanıcı Silme", isSub: true }
-        ]
-    };
+    // Yetki Listesi - Bu anahtarlar Sohbet sayfasındaki kontrollerle birebir aynıdır
+    const permissionMap = [
+        { key: "canLogin", label: "Giriş Yapabilir" },
+        { key: "canSeeChat", label: "Sohbeti Görebilir" },
+        { key: "canWrite", label: "Mesaj Yazabilir" },
+        { key: "canUseColors", label: "Renkli Yazı" },
+        { key: "canBan", label: "Banlama" },
+        { key: "canKick", label: "Sohbetten Atma" },
+        { key: "canVerifyF", label: "F / Kalıcı Onay" },
+        { key: "canVerifyTemp", label: "Geçici Onay" },
+        { key: "canClearChat", label: "Sohbet Temizleme" },
+        { key: "canAccessAdmin", label: "🛡️ Admin Panel Giriş" },
+        { key: "manageUsers", label: "👤 Kullanıcı Yönetimi" },
+        { key: "manageRoles", label: "🎭 Rütbe Ayarları" },
+        { key: "managePerms", label: "🔐 Yetki Tablosu" },
+        { key: "viewIpLog", label: "🌐 İp Günlüğü" },
+        { key: "manageBans", label: "🚫 Ban Yönetimi" },
+        { key: "editNick", label: "➜ Nick Değişikliği" },
+        { key: "viewPass", label: "➜ Şifre Görme" },
+        { key: "editVerifyF", label: "➜ Onay (F) Değişikliği" },
+        { key: "editUserRole", label: "➜ Rütbe Değişikliği" },
+        { key: "deleteUser", label: "➜ Kullanıcı Silme" }
+    ];
 
-    function updateP(rütbeAdi, folder, yetkiAnahtari, deger) { 
-        db.ref(`permissions/${rütbeAdi}/${folder}/${yetkiAnahtari}`).set(deger); 
+    // Tıklanan kutucuğu anında veritabanına kaydeder
+    function updateP(rütbeAdi, yetkiAnahtari, deger) { 
+        db.ref(`permissions/${rütbeAdi}/${yetkiAnahtari}`).set(deger); 
     }
 
     async function checkMyPerms() {
-    const userSnap = await db.ref('users/' + myName).once('value');
-    const userData = userSnap.val() || {};
-    const myRole = (userData.role === "Kurucu" || myName === "Filiz Yeşili FM") ? "Kurucu" : (userData.role || "");
-    
-    // Yetkileri Çek
-    let perms;
-    if (myRole === "Kurucu") {
-        // Kurucu her şeyi görür
-        perms = { 
-            canAccessAdmin: true, manageUsers: true, manageRoles: true, 
-            managePerms: true, viewIpLog: true, manageBans: true,
-            editNick: true, viewPass: true, editVerifyF: true, 
-            editUserRole: true, deleteUser: true 
-        };
-    } else {
-        const pSnap = await db.ref('permissions/' + myRole + '/Panel_Yetkileri').once('value');
-        perms = pSnap.val() || {};
+        const userSnap = await db.ref('users/' + myName).once('value');
+        const userData = userSnap.val() || {};
+        const myRole = (userData.role === "Kurucu" || myName === "Filiz Yeşili FM") ? "Kurucu" : (userData.role || "");
+        if (myRole === "Kurucu") myPerms = { canAccessAdmin:true, canManageRoles:true, canManagePerms:true, canSeePass:true };
+        else { const pSnap = await db.ref('permissions/' + myRole).once('value'); myPerms = pSnap.val() || {}; }
+        init();
     }
-    
-    myPerms = perms; // Global değişkene aktar
-    applyUIPermissions(perms); // Arayüzü yetkilere göre düzenle
-    init(); // Sayfayı yükle
-}
-
-function applyUIPermissions(p) {
-    // 1. ANA MENÜ TABLARI KONTROLÜ
-    // Eğer 'canAccessAdmin' yoksa zaten buraya girmemeli ama biz yine de ana tabları gizleyelim
-    toggleElement('tab-users', p.manageUsers);
-    toggleElement('tab-roles', p.manageRoles);
-    toggleElement('tab-perms', p.managePerms);
-    toggleElement('tab-ip', p.viewIpLog);
-    toggleElement('tab-ban-manage', p.manageBans);
-
-    // Eğer kişinin girdiği ilk tab (Kullanıcı Yönetimi) kapalıysa, açık olan ilk tabı göster
-    if (!p.manageUsers) {
-        if (p.manageRoles) openTab('roles-tab', document.getElementById('tab-roles'));
-        else if (p.managePerms) openTab('perms-tab', document.getElementById('tab-perms'));
-    }
-}
-
-// Element gizleme/gösterme yardımcı fonksiyonu
-function toggleElement(id, hasPerm) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (hasPerm) el.classList.remove('hidden');
-    else el.classList.add('hidden');
-}
 
     function init() {
         db.ref('role_settings').on('value', rSnap => {
@@ -204,85 +168,37 @@ function toggleElement(id, hasPerm) {
             roleList = Object.keys(roles).sort((a,b) => (roles[a].order || 99) - (roles[b].order || 99));
             renderRoles(roles, roleList);
             db.ref('permissions').on('value', pSnap => renderPerms(roleList, pSnap.val() || {}, roles));
-            loadUsers(); loadIPLogs(); loadBanManagement();
+            loadUsers();
+            loadIPLogs();
+            loadBanManagement();
         });
-    }
-
-    function filterPerms(group, btn) {
-        currentPermGroup = group;
-        document.querySelectorAll('.perm-tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        db.ref('permissions').once('value', pSnap => {
-            db.ref('role_settings').once('value', rSnap => {
-                renderPerms(roleList, pSnap.val() || {}, rSnap.val() || {});
-            });
-        });
-    }
-
-    function renderPerms(roleKeys, allPerms, roles) {
-        const h = document.getElementById('perm-header-row'); 
-        const b = document.getElementById('perm-matrix-body');
-        h.innerHTML = '<th>YETKİ TANIMI</th>' + roleKeys.map(r => `<th style="color:${roles[r]?.color}">${r.toUpperCase()}</th>`).join('');
-        
-        let html = "";
-        permissionGroups[currentPermGroup].forEach(p => {
-            let rowClass = p.isSub ? "sub-perm-label" : "";
-            html += `<tr><td class="${rowClass}">${p.label}</td>`;
-            roleKeys.forEach(r => {
-                const isK = (r === "Kurucu");
-                const val = isK ? true : (allPerms[r] && allPerms[r][currentPermGroup] && allPerms[r][currentPermGroup][p.key] === true);
-                html += `<td><input type="checkbox" ${val ? 'checked' : ''} ${isK ? 'disabled' : ''} onchange="updateP('${r}','${currentPermGroup}','${p.key}',this.checked)"></td>`;
-            });
-            html += `</tr>`;
-        });
-        b.innerHTML = html;
     }
 
     function loadUsers() {
-    db.ref('users').on('value', s => {
-        const list = document.getElementById('user-list'); list.innerHTML = "";
-        s.forEach(u => {
-            const n = u.key; const d = u.val();
-            let ops = roleList.map(k => `<option value="${k}" ${d.role===k?'selected':''}>${k}</option>`).join('');
-            
-            // Alt Yetki Kontrolleri
-            const nickInput = myPerms.editNick ? `<input type="text" value="${n}" id="un-${n}">` : `<b>${n}</b>`;
-            const passInput = myPerms.viewPass ? `<input type="text" value="${d.password || ''}" id="up-${n}">` : `****`;
-            const verifySelect = myPerms.editVerifyF ? `<select id="uv-${n}"><option value="true" ${d.isVerified?'selected':''}>ONAYLI (F)</option><option value="false" ${!d.isVerified?'selected':''}>ONAYSIZ</option></select>` : (d.isVerified ? 'ONAYLI' : 'ONAYSIZ');
-            const roleSelect = myPerms.editUserRole ? `<select id="ur-${n}">${ops}</select>` : `<b>${d.role}</b>`;
-            const deleteBtn = myPerms.deleteUser ? `<button class="btn-action btn-delete" onclick="deleteUser('${n}')">SİL</button>` : "";
-            const saveBtn = (myPerms.editNick || myPerms.viewPass || myPerms.editVerifyF || myPerms.editUserRole) ? `<button class="btn-action btn-save" onclick="saveU('${n}')">KAYDET</button>` : "";
-
-            list.innerHTML += `<tr>
-                <td style="color:${d.color || '#fff'}"><b>${n}</b></td>
-                <td>${nickInput}</td>
-                <td>${passInput}</td>
-                <td>${verifySelect}</td>
-                <td>${roleSelect}</td>
-                <td>${saveBtn} ${deleteBtn}</td>
-            </tr>`;
-        });
-    });
-}
-
-    function addToWhitelist() {
-        const ip = document.getElementById('white-ip').value.trim();
-        const desc = document.getElementById('white-desc').value.trim();
-        if(ip && desc) {
-            db.ref('whitelist/'+ip.replace(/\./g,'_')).set({ip, desc}).then(() => {
-                alert("Güvenli listeye eklendi!");
-                document.getElementById('white-ip').value = "";
-                document.getElementById('white-desc').value = "";
+        db.ref('users').on('value', s => {
+            const list = document.getElementById('user-list'); list.innerHTML = "";
+            s.forEach(u => {
+                const n = u.key; const d = u.val();
+                let ops = roleList.map(k => `<option value="${k}" ${d.role===k?'selected':''}>${k}</option>`).join('');
+                list.innerHTML += `<tr>
+                    <td style="color:${d.color || '#fff'}"><b>${n}</b></td>
+                    <td><input type="text" value="${n}" id="un-${n}"></td>
+                    <td><input type="text" value="${myPerms.canSeePass?(d.password||''):'****'}" id="up-${n}"></td>
+                    <td><select id="uv-${n}"><option value="true" ${d.isVerified?'selected':''}>ONAYLI (F)</option><option value="false" ${!d.isVerified?'selected':''}>ONAYSIZ</option></select></td>
+                    <td><select id="ur-${n}">${ops}</select></td>
+                    <td><button class="btn-action btn-save" onclick="saveU('${n}')">KAYDET</button>
+                        <button class="btn-action btn-delete" onclick="deleteUser('${n}')">SİL</button></td>
+                </tr>`;
             });
-        } else { alert("Lütfen IP ve Açıklama girin!"); }
+        });
     }
 
-    // Diğer yardımcı fonksiyonlar (saveU, deleteUser, loadIPLogs, loadBanManagement, removeBan, removeWhite, openTab)
     async function saveU(oldN) {
         const newN = document.getElementById('un-'+oldN).value.trim();
         const p = document.getElementById('up-'+oldN).value;
         const v = document.getElementById('uv-'+oldN).value === 'true';
         let r = document.getElementById('ur-'+oldN).value;
+        if (r === "Misafir" || r === "Üye") r = v ? "Üye" : "Misafir";
         const snap = await db.ref('users/'+oldN).once('value');
         const data = snap.val() || {};
         data.password = p; data.isVerified = v; data.role = r;
@@ -290,21 +206,42 @@ function toggleElement(id, hasPerm) {
         else { await db.ref('users/'+oldN).update(data); }
         alert("Güncellendi!");
     }
+
     async function deleteUser(n) { if(confirm(n + " silinsin mi?")) await db.ref('users/'+n).remove(); }
+
     function loadIPLogs() {
         db.ref('user_registry').on('value', s => {
             const list = document.getElementById('ip-list-body'); list.innerHTML = "";
             s.forEach(u => {
-                const d = u.val(); const isOnline = (d.last_seen && (Date.now() - d.last_seen < 600000));
-                list.innerHTML += `<tr><td>${u.key}</td><td>${d.last_ip || '---'}</td><td>${new Date(d.last_seen).toLocaleString()}</td><td>${isOnline ? '<b style="color:var(--success)">AKTİF</b>' : 'Çevrimdışı'}</td><td><button class="btn-action btn-delete" onclick="banUser('${d.last_ip}', '${u.key}')">BAN</button></td></tr>`;
+                const d = u.val();
+                const isOnline = (d.last_seen && (Date.now() - d.last_seen < 600000));
+                list.innerHTML += `<tr>
+                    <td style="color:var(--neon); font-weight:bold;">${u.key}</td>
+                    <td>${d.last_ip || '---'}</td>
+                    <td>${new Date(d.last_seen).toLocaleString()}</td>
+                    <td>${isOnline ? '<b style="color:var(--success)">AKTİF</b>' : 'Çevrimdışı'}</td>
+                    <td><button class="btn-action btn-delete" onclick="banUser('${d.last_ip}', '${u.key}')">BAN</button>
+                        <button class="btn-action" style="background:#444;" onclick="deleteIPLog('${u.key}')">SİL</button></td>
+                </tr>`;
             });
         });
     }
+
+    function deleteIPLog(n) { if(confirm("Log silinsin mi?")) db.ref('user_registry/'+n).remove(); }
+
     async function banUser(ip, nick) {
         if(!ip || ip === "---") return alert("IP yok!");
         const safeIp = ip.replace(/\./g, '_');
-        if(confirm(nick + " yasaklansın mı?")) { await db.ref('banned_ips/' + safeIp).set({ nick: nick, date: Date.now() }); alert("Yasaklandı!"); }
+        const white = await db.ref('whitelist/' + safeIp).once('value');
+        if(white.exists()) return alert("GÜVENLİ IP BANLANAMAZ!");
+        if(confirm(nick + " yasaklansın mı?")) {
+            await db.ref('banned_ips/' + safeIp).set({ nick: nick, date: Date.now() });
+            await db.ref('user_registry/' + nick).remove();
+            await db.ref('presence/' + nick).remove();
+            alert("Yasaklandı!");
+        }
     }
+
     function loadBanManagement() {
         db.ref('banned_ips').on('value', s => {
             const b = document.getElementById('ban-list-body'); b.innerHTML = "";
@@ -315,13 +252,32 @@ function toggleElement(id, hasPerm) {
             s.forEach(i => { w.innerHTML += `<tr><td>${i.val().desc}</td><td>${i.val().ip}</td><td><button class="btn-action btn-delete" onclick="removeWhite('${i.key}')">SİL</button></td></tr>`; });
         });
     }
-    async function removeBan(k) { if(confirm("Kaldırılsın mı?")) await db.ref('banned_ips/'+k).remove(); }
-    async function removeWhite(k) { if(confirm("Silinsin mi?")) await db.ref('whitelist/'+k).remove(); }
+
+    async function removeBan(k) { if(confirm("Yasak kalksın mı?")) await db.ref('banned_ips/'+k).remove(); }
+    function addToWhitelist() {
+        const ip = document.getElementById('white-ip').value.trim();
+        const desc = document.getElementById('white-desc').value.trim();
+        if(ip && desc) db.ref('whitelist/'+ip.replace(/\./g,'_')).set({ip, desc}).then(()=> { document.getElementById('white-ip').value=""; document.getElementById('white-desc').value=""; });
+    }
+    async function removeWhite(k) { if(confirm("Güvenli listeden silinsin mi?")) await db.ref('whitelist/'+k).remove(); }
+
     function renderRoles(data, keys) {
         document.getElementById('role-list-body').innerHTML = keys.map(k => `<tr><td><input type="number" value="${data[k].order}" id="ord-${k}" style="width:50px;"></td><td style="color:${data[k].color}"><b>${k}</b></td><td><input type="color" value="${data[k].color}" id="cp-${k}" oninput="document.getElementById('hex-${k}').value = this.value"></td><td><input type="text" value="${data[k].color}" id="hex-${k}" style="width:80px;"></td><td><button class="btn-action btn-save" onclick="updateR('${k}')">GÜN.</button></td></tr>`).join('');
     }
     async function updateR(n) { await db.ref('role_settings/'+n).update({color:document.getElementById('hex-'+n).value, order:parseInt(document.getElementById('ord-'+n).value)}); alert("Güncellendi!"); }
+
+    function renderPerms(roleKeys, perms, roles) {
+        const h = document.getElementById('perm-header-row'); const b = document.getElementById('perm-matrix-body');
+        h.innerHTML = '<th>YETKİ TANIMI</th>' + roleKeys.map(r => `<th style="color:${roles[r]?.color}">${r.toUpperCase()}</th>`).join('');
+        b.innerHTML = permissionMap.map(p => `<tr><td>${p.label}</td>` + roleKeys.map(r => {
+            const isK = r === "Kurucu"; const val = isK ? true : (perms[r] ? perms[r][p.key] : false);
+            return `<td><input type="checkbox" ${val?'checked':''} ${isK?'disabled':''} onchange="updateP('${r}','${p.key}',this.checked)"></td>`;
+        }).join('') + "</tr>").join('');
+    }
+    
+
     function openTab(id, btn) { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(id).classList.add('active'); btn.classList.add('active'); }
+    function openSubTab(id, btn) { document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active')); document.getElementById('sub-btn-ban').classList.remove('active'); document.getElementById('sub-btn-white').classList.remove('active'); document.getElementById(id).classList.add('active'); btn.classList.add('active'); }
 
     checkMyPerms();
 </script>
