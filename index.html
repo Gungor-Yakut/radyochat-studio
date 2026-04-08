@@ -248,81 +248,8 @@ startCounter(); // Sayacı başlat
         });
     }
 
-    async function startAuth() { 
-    if(!myName) return; 
-    const authBtn = document.getElementById('auth-btn');
-    const msgInput = document.getElementById('msg');
-    const chatWin = document.getElementById('chat-window');
-    const tools = document.getElementById('tools-widget');
 
-    // 1. GİRİŞ/ÇIKIŞ BUTON GÖRÜNÜMÜ
-    if (myName.startsWith("Guest")) {
-        authBtn.innerText = "GİRİŞ YAP"; authBtn.style.color = "#888";
-    } else {
-        authBtn.innerText = "ÇIKIŞ YAP"; authBtn.style.color = "#ff4b2b";
-    }
-
-    // 2. YETKİ VE RÜTBE DİNLEYİCİ (Canlı Güncelleme)
-    db.ref('users/' + myName).on('value', async s => {
-        const ud = s.val() || {};
-        myRole = myName.startsWith("Guest") ? "Misafir" : (ud.role || "Misafir");
-        
-        // Yetki Tablosunu Yükle
-        if (myRole === "Kurucu") {
-            // Kurucu her şeye tam yetkili (Emniyet Kilidi)
-            myPerms = { canAccessAdmin:true, canDeleteMsgs:true, canUseColors:true, canEditLayout:true, canVerifyUsers:true, canWrite:true, canBan:true, canKick:true, canClearChat:true };
-        } else {
-            const pSnap = await db.ref('permissions/' + myRole).once('value');
-            myPerms = pSnap.val() || {};
-        }
-
-        // Presence Güncelle (Online Listesi için)
-        db.ref('presence/' + myName).update({ 
-            name: myName, color: ud.color || (myName.startsWith("Guest") ? "#aaaaaa" : currentColor), 
-            role: myRole, isVerified: ud.isVerified || false 
-        });
-        db.ref('presence/' + myName).onDisconnect().remove();
-        
-        // Yasaklılar butonu yetkisini kontrol et
-        checkBanViewPerms();
-    });
-
-    // 3. ONAY VE ERİŞİM KONTROLÜ (Mesaj yazma ve görme)
-    db.ref('presence/' + myName).on('value', async (snap) => {
-        const d = snap.val() || {};
-        const isOk = (d.tempVerify || d.isVerified); 
-
-        if (isOk) {
-            // KULLANICI ONAYLIYSA
-            loadMessages();
-            
-            // Mesaj Yazma Yetkisi (canWrite) Kontrolü
-            if (myPerms.canWrite !== false) {
-                msgInput.disabled = false; 
-                msgInput.placeholder = "Mesajınızı yazın...";
-            } else {
-                msgInput.disabled = true; 
-                msgInput.placeholder = "Yazma yetkiniz kısıtlandı.";
-            }
-
-            // Renk/Araç Yetkisi (canUseColors) Kontrolü
-            if (myPerms.canUseColors) {
-                tools.style.opacity = "1"; tools.style.pointerEvents = "auto";
-            } else {
-                tools.style.opacity = "0.2"; tools.style.pointerEvents = "none";
-            }
-
-        } else {
-            // KULLANICI ONAYSIZSA
-            msgInput.disabled = true; 
-            msgInput.placeholder = "Onay bekleniyor...";
-            chatWin.innerHTML = `<div class="system-msg" style="color: #ff4b2b; padding: 20px; border: 1px solid #ff4b2b;"><b>Sohbet Kilitli!</b><br>Giriş yapmalı veya onay almalısınız.</div>`;
-        }
-    });
-}
-
-
- function setupPresence(uid) {
+function setupPresence(uid) {
     // Kullanıcının online olduğu konum
     const userStatusRef = db.ref('presence/' + uid);
 
@@ -345,40 +272,87 @@ startCounter(); // Sayacı başlat
         });
     });
 }
-    function loadUsers() {
+
+    async function startAuth() {
+    // 1. Kullanıcıya özel benzersiz ID oluştur (Çakışmayı önlemek için)
+    // Eğer nick yoksa Guest + random sayı kullan
+    if (!myName) {
+        myName = "Guest" + Math.floor(100 + Math.random() * 899);
+        sessionStorage.setItem("filiz_chat_nick", myName);
+    }
+
+    const presenceRef = db.ref('presence/' + myName);
+
+    // 2. Bağlantı koptuğunda silme talimatı (Zombi kullanıcıları önler)
+    presenceRef.onDisconnect().remove();
+
+    // 3. Kullanıcı verilerini ve onay durumunu dinle
+    db.ref('users/' + myName).on('value', async s => {
+        const ud = s.val() || {};
+        myRole = ud.role || "Misafir";
+        
+        // Onay durumlarını çek
+        const isF = ud.isVerified || false;
+        const isV = ud.tempVerify || false;
+
+        // Presence altına yaz (Herkes kendi nickiyle klasör açar)
+        presenceRef.set({
+            name: myName,
+            role: myRole,
+            isVerified: isF,
+            tempVerify: isV,
+            color: currentColor,
+            lastSeen: firebase.database.ServerValue.TIMESTAMP
+        });
+    });
+
+    // Listeyi yükle
+    loadUsers();
+}
+
+function loadUsers() {
+    // 'presence' klasöründeki TÜM kullanıcıları dinle
     db.ref('presence').on('value', s => {
         const list = document.getElementById('user-list');
-        list.innerHTML = "";
+        if (!list) return;
+        
+        list.innerHTML = ""; // Listeyi temizle (Üst üste binmeyi önler)
         let users = [];
-        
-        s.forEach(u => users.push(u.val()));
-        
-        // Rol önceliğine göre sırala
-        users.sort((a,b) => (rolePriority[b.role]||0) - (rolePriority[a.role]||0));
 
+        s.forEach(child => {
+            users.push(child.val());
+        });
+
+        // SIRALAMA: Önce Rol Önceliği, sonra İsme Göre
+        users.sort((a, b) => {
+            const roleDiff = (rolePriority[b.role] || 0) - (rolePriority[a.role] || 0);
+            if (roleDiff !== 0) return roleDiff;
+            return a.name.localeCompare(b.name);
+        });
+
+        // LİSTEYİ OLUŞTUR
         users.forEach(ud => {
-            // ŞART: Eğer isVerified (F) doğruysa VEYA tempVerify (Onay) doğruysa 'onaylı' sayılır.
             const isApproved = (ud.isVerified === true || ud.tempVerify === true);
-            
             const row = document.createElement('div');
             row.className = "online-user-row";
             
-            // Eğer isApproved false ise (yani ikisi de yoksa) 'unverified-text' sınıfını ekle
+            // Eğer onaysızsa 'unverified-text' ekle (Üzeri çizili alan)
             const drawingClass = isApproved ? "" : "unverified-text";
 
             row.innerHTML = `
                 <div class="verify-box ${ud.isVerified ? 'tick-f' : (ud.tempVerify ? 'tick-v' : '')}">
                     ${ud.isVerified ? 'F' : (ud.tempVerify ? '✓' : '')}
                 </div>
-                <span class="user-name-label ${drawingClass}" style="color:${ud.color}">
+                <span class="user-name-label ${drawingClass}" style="color:${ud.color || '#00f2ff'}">
                     ● ${ud.name}
                 </span>
             `;
             list.appendChild(row);
         });
-        
+
         // Dinleyici sayısını güncelle
-        document.getElementById('total-user-count').innerText = users.length;
+        const countEl = document.getElementById('total-user-count');
+        if (countEl) countEl.innerText = users.length;
     });
 }
 
