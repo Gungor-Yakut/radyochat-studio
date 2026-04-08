@@ -347,54 +347,38 @@ startCounter(); // Sayacı başlat
 }
     function loadUsers() {
     db.ref('presence').on('value', s => {
-        const list = document.getElementById('user-list'); 
-        if(!list) return;
+        const list = document.getElementById('user-list');
         list.innerHTML = "";
+        let users = [];
         
-        let usersArray = [];
+        s.forEach(u => users.push(u.val()));
+        
+        // Rol önceliğine göre sırala
+        users.sort((a,b) => (rolePriority[b.role]||0) - (rolePriority[a.role]||0));
 
-        // 1. Önce tüm kullanıcıları bir diziye topla
-        s.forEach(u => {
-            const ud = u.val();
-            if(ud.name) {
-                usersArray.push(ud);
-            }
-        });
-
-        // 2. Kullanıcıları rütbe önceliğine göre sırala
-        usersArray.sort((a, b) => {
-            const priorityA = rolePriority[a.role] || 0;
-            const priorityB = rolePriority[b.role] || 0;
-            return priorityB - priorityA; // Büyükten küçüğe
-        });
-
-        // 3. Sıralanmış listeyi ekrana bas
-        usersArray.forEach(ud => {
-            const isAdmin = (myRole === "Kurucu" || myRole === "Yönetici" || (myPerms && myPerms.canAccessAdmin));
-            const hasP = ud.isVerified === true;
-            const hasT = ud.tempVerify === true;
-
-            const div = document.createElement('div'); 
-            div.className = "online-user-row-container";
+        users.forEach(ud => {
+            // ŞART: Eğer isVerified (F) doğruysa VEYA tempVerify (Onay) doğruysa 'onaylı' sayılır.
+            const isApproved = (ud.isVerified === true || ud.tempVerify === true);
             
-            div.innerHTML = `
-                <div class="online-user-row">
-                    <div class="verify-box ${hasP ? 'tick-f' : (hasT ? 'tick-v' : '')}" onclick="quickVerify('${ud.name}', ${hasP})">
-                        ${hasP ? 'F' : (hasT ? '✓' : '')}
-                    </div>
-                    <span class="user-name-label" style="color:${ud.color || '#fff'}; cursor:pointer;" onclick="toggleUserActions('${ud.name}')">
-                        ● ${ud.name} <small style="opacity:0.6; font-size:10px;">[${ud.role || 'Misafir'}]</small>
-                    </span>
+            const row = document.createElement('div');
+            row.className = "online-user-row";
+            
+            // Eğer isApproved false ise (yani ikisi de yoksa) 'unverified-text' sınıfını ekle
+            const drawingClass = isApproved ? "" : "unverified-text";
+
+            row.innerHTML = `
+                <div class="verify-box ${ud.isVerified ? 'tick-f' : (ud.tempVerify ? 'tick-v' : '')}">
+                    ${ud.isVerified ? 'F' : (ud.tempVerify ? '✓' : '')}
                 </div>
-                ${isAdmin && ud.name !== myName ? `
-                <div id="actions-${ud.name.replace(/\s+/g, '_')}" class="quick-action-panel">
-                    <div class="action-btn btn-kick" onclick="kickUser('${ud.name}')">SOHBETTEN AT</div>
-                    <div class="action-btn btn-ban" onclick="quickBanUser('${ud.name}')">KALICI BANLA</div>
-                </div>
-                ` : ''}
+                <span class="user-name-label ${drawingClass}" style="color:${ud.color}">
+                    ● ${ud.name}
+                </span>
             `;
-            list.appendChild(div);
+            list.appendChild(row);
         });
+        
+        // Dinleyici sayısını güncelle
+        document.getElementById('total-user-count').innerText = users.length;
     });
 }
 
