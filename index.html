@@ -149,8 +149,15 @@ startCounter(); // Sayacı başlat
 
     function loadMessages() {
     const win = document.getElementById('chat-window');
+    if (!win) return; // Eğer chat penceresi yoksa dur
     db.ref('messages').off(); 
     win.innerHTML = "";
+
+    // ONAY KONTROLÜ
+    if (!isVerified) {
+        win.innerHTML = `<div class="system-msg" style="border:none; background:none; color:#ff4b2b;">🔒 Sohbeti görmek için onay bekleniyor...</div>`;
+        return;
+    }
     
     db.ref('messages').limitToLast(50).on('child_added', s => {
         const d = s.val();
@@ -203,20 +210,24 @@ startCounter(); // Sayacı başlat
     }
 
     document.getElementById('msg').onkeypress = async (e) => { 
-        if(e.key === "Enter" && e.target.value.trim() !== "") { 
-            const mySnap = await db.ref('presence/' + myName).once('value');
-            const myD = mySnap.val() || {};
-
-            if(myD.isVerified || myD.tempVerify) {
-                db.ref('messages').push().set({ 
-                    u: myName, m: e.target.value, c: currentColor, uc: currentColor, b: isBold, i: isItalic 
-                }); 
-                e.target.value = ""; 
-            } else {
-                alert("Mesaj yazmak için onay beklemelisiniz.");
-            }
-        } 
-    };
+    if(e.key === "Enter" && e.target.value.trim() !== "") { 
+        // startAuth içinde zaten isVerified güncellendiği için doğrudan kullanabiliriz
+        if(isVerified) { 
+            db.ref('messages').push().set({ 
+                u: myName, 
+                m: e.target.value, 
+                c: currentColor, 
+                uc: currentColor, 
+                b: isBold, 
+                i: isItalic,
+                timestamp: Date.now()
+            }); 
+            e.target.value = ""; 
+        } else {
+            alert("Sohbet izniniz henüz onaylanmamış!");
+        }
+    } 
+};
 
 // Dinleyici Sayısını Dinleyen Fonksiyon
     function startCounter() {
@@ -234,19 +245,23 @@ startCounter(); // Sayacı başlat
     }
 
     function loadLayout() {
-        db.ref('layout').once('value', s => {
-            const d = s.val() || {};
-            widgetIds.forEach(id => {
-                const el = document.getElementById(id);
-                if(!el) return;
-                if(d[id]) {
-                    el.style.left = d[id].x + "px"; el.style.top = d[id].y + "px";
-                    el.style.width = d[id].w + "px"; el.style.height = d[id].h + "px";
-                }
-                el.style.opacity = "1";
-            });
+    db.ref('layout').once('value', s => {
+        const d = s.val() || {};
+        widgetIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && d[id]) {
+                // Koordinatları ve boyutları px olarak uygula
+                el.style.left = d[id].x + "px";
+                el.style.top = d[id].y + "px";
+                el.style.width = d[id].w + "px";
+                el.style.height = d[id].h + "px";
+                // Önemli: Transform kalıntılarını sıfırla
+                el.style.transform = "none"; 
+            }
+            if (el) el.style.opacity = "1";
         });
-    }
+    });
+}
 
 
 function setupPresence(uid) {
@@ -274,81 +289,104 @@ function setupPresence(uid) {
 }
 
     async function startAuth() {
-    // 1. Kullanıcıya özel benzersiz ID oluştur (Çakışmayı önlemek için)
-    // Eğer nick yoksa Guest + random sayı kullan
-    if (!myName) {
-        myName = "Guest" + Math.floor(100 + Math.random() * 899);
-        sessionStorage.setItem("filiz_chat_nick", myName);
-    }
-
     const presenceRef = db.ref('presence/' + myName);
-
-    // 2. Bağlantı koptuğunda silme talimatı (Zombi kullanıcıları önler)
     presenceRef.onDisconnect().remove();
 
-    // 3. Kullanıcı verilerini ve onay durumunu dinle
+    // Kullanıcı verilerini ve onay durumunu dinle
     db.ref('users/' + myName).on('value', async s => {
         const ud = s.val() || {};
         myRole = ud.role || "Misafir";
         
-        // Onay durumlarını çek
-        const isF = ud.isVerified || false;
-        const isV = ud.tempVerify || false;
+        // Presence tablosundaki anlık durumu dinle
+        db.ref('presence/' + myName).on('value', ps => {
+            const pd = ps.val() || {};
+            const isF = ud.isVerified === true;
+            const isV = pd.tempVerify === true;
+            isVerified = (isF || isV); 
 
-        // Presence altına yaz (Herkes kendi nickiyle klasör açar)
+            const authBtn = document.getElementById('auth-btn');
+            const msgInput = document.getElementById('msg');
+            const toolsWidget = document.getElementById('tools-widget');
+
+            if (ud.password) {
+                authBtn.innerText = "👤 " + myName;
+                authBtn.style.color = "#00fc00";
+            } else {
+                authBtn.innerText = "GİRİŞ YAP";
+            }
+
+            if (isVerified) {
+                if(msgInput) { msgInput.disabled = false; msgInput.placeholder = "Mesajınızı yazın..."; }
+                if(toolsWidget) { toolsWidget.style.opacity = "1"; toolsWidget.style.pointerEvents = "auto"; }
+            } else {
+                if(msgInput) { msgInput.disabled = true; msgInput.placeholder = "Onay bekleniyor..."; }
+                if(toolsWidget) { toolsWidget.style.opacity = "0.3"; toolsWidget.style.pointerEvents = "none"; }
+            }
+            
+            // Onay durumu her değiştiğinde mesaj alanını tazele
+            loadMessages();
+        });
+
+        // Online listesine kendini kaydet
         presenceRef.set({
             name: myName,
             role: myRole,
-            isVerified: isF,
-            tempVerify: isV,
+            isVerified: ud.isVerified || false,
+            tempVerify: false,
             color: currentColor,
             lastSeen: firebase.database.ServerValue.TIMESTAMP
         });
     });
 
-    // Listeyi yükle
     loadUsers();
 }
 
 function loadUsers() {
-    // 'presence' klasöründeki TÜM kullanıcıları dinle
     db.ref('presence').on('value', s => {
         const list = document.getElementById('user-list');
         if (!list) return;
-        
-        list.innerHTML = ""; // Listeyi temizle (Üst üste binmeyi önler)
+        list.innerHTML = "";
         let users = [];
 
-        s.forEach(child => {
-            users.push(child.val());
-        });
+        s.forEach(child => { users.push(child.val()); });
 
-        // SIRALAMA: Önce Rol Önceliği, sonra İsme Göre
         users.sort((a, b) => {
             const roleDiff = (rolePriority[b.role] || 0) - (rolePriority[a.role] || 0);
-            if (roleDiff !== 0) return roleDiff;
-            return a.name.localeCompare(b.name);
+            return roleDiff !== 0 ? roleDiff : a.name.localeCompare(b.name);
         });
 
-        // LİSTEYİ OLUŞTUR
         users.forEach(ud => {
-            const isApproved = (ud.isVerified === true || ud.tempVerify === true);
+            const isF = ud.isVerified === true; // Kalıcı onay
+            const isV = ud.tempVerify === true; // Geçici onay
+            const isApproved = (isF || isV);
+            
             const row = document.createElement('div');
             row.className = "online-user-row";
             
-            // Eğer onaysızsa 'unverified-text' ekle (Üzeri çizili alan)
-            const drawingClass = isApproved ? "" : "unverified-text";
+            // Onay tipine göre ikon belirleme
+            let verifyIcon = "";
+            let verifyClass = "";
+            
+            if (isF) {
+                verifyIcon = "F";
+                verifyClass = "tick-f"; // Mavi/Neon F kutusu
+            } else if (isV) {
+                verifyIcon = "✓";
+                verifyClass = "tick-v"; // Yeşil onay kutusu
+            }
 
             row.innerHTML = `
-                <div class="verify-box ${ud.isVerified ? 'tick-f' : (ud.tempVerify ? 'tick-v' : '')}">
-                    ${ud.isVerified ? 'F' : (ud.tempVerify ? '✓' : '')}
+                <div class="verify-box ${verifyClass}" onclick="quickVerify('${ud.name}', ${isApproved})">
+                    ${verifyIcon}
                 </div>
-                <span class="user-name-label ${drawingClass}" style="color:${ud.color || '#00f2ff'}">
+                <span class="user-name-label ${isApproved ? '' : 'unverified-text'}" style="color:${ud.color || '#00f2ff'}">
                     ● ${ud.name}
                 </span>
             `;
             list.appendChild(row);
         });
+
+
 
         // Dinleyici sayısını güncelle
         const countEl = document.getElementById('total-user-count');
@@ -436,28 +474,39 @@ document.addEventListener('mousedown', (e) => {
     }
 });
 
-    async function quickVerify(tNick, isP) {
+async function quickVerify(tNick, isCurrentlyVerified) {
     const currentRole = (myRole || "").toLowerCase().trim();
     const adminRanks = ["kurucu", "admin", "yönetici", "teknik ekip", "teknik servis"];
-    
-    if (!adminRanks.includes(currentRole)) {
-        if (currentRole === "dj") db.ref('presence/'+tNick).update({ tempVerify: true });
+
+    // --- 1. DJ YETKİSİ (Sadece Geçici ✓ Onayı) ---
+    if (currentRole === "dj") {
+        if (isCurrentlyVerified) {
+            // Eğer onaylıysa onayını geri al (Geçiciyi siler)
+            await db.ref('presence/' + tNick).update({ tempVerify: false });
+        } else {
+            // Onaylı değilse geçici onay ver (Presence tablosuna ✓ yazar)
+            await db.ref('presence/' + tNick).update({ tempVerify: true });
+        }
         return;
     }
 
-    if (isP) {
-        if(confirm(tNick + " kullanıcısının ONAYI KALDIRILSIN ve rütbesi MİSAFİR yapılsın mı?")) {
-            await db.ref('users/' + tNick).update({ isVerified: false, role: "Misafir" });
-            await db.ref('presence/' + tNick).update({ isVerified: false, tempVerify: false, role: "Misafir" });
-            // Mesaj gönderme kısmı silindi.
+    // --- 2. ÜST YÖNETİM YETKİSİ (Kalıcı F Onayı) ---
+    if (adminRanks.includes(currentRole)) {
+        if (isCurrentlyVerified) {
+            // Onayı KALDIRMA işlemi
+            if(confirm(tNick + " kullanıcısının KALICI ONAYI kaldırılsın ve rütbesi MİSAFİR yapılsın mı?")) {
+                await db.ref('users/' + tNick).update({ isVerified: false, role: "Misafir" });
+                await db.ref('presence/' + tNick).update({ isVerified: false, tempVerify: false, role: "Misafir" });
+            }
+        } else {
+            // Kalıcı TAM ONAY (F) verme işlemi
+            if(confirm(tNick + " kullanıcısına KALICI F ONAYI verilsin ve rütbesi ÜYE yapılsın mı?")) {
+                await db.ref('users/' + tNick).update({ isVerified: true, role: "Üye" });
+                await db.ref('presence/' + tNick).update({ isVerified: true, tempVerify: false, role: "Üye" });
+            }
         }
-    } 
-    else {
-        if(confirm(tNick + " kullanıcısına TAM ONAY verilsin ve rütbesi ÜYE yapılsın mı?")) {
-            await db.ref('users/' + tNick).update({ isVerified: true, role: "Üye" });
-            await db.ref('presence/' + tNick).update({ isVerified: true, tempVerify: false, role: "Üye" });
-            // Mesaj gönderme kısmı silindi.
-        }
+    } else {
+        alert("Bu işlemi yapmak için yetkiniz bulunmuyor.");
     }
 }
 
@@ -482,8 +531,9 @@ document.addEventListener('mousedown', (e) => {
             el.appendChild(overlay);
 
             const draggie = new Draggabilly(el, {
-                handle: '.widget-overlay' // Sürükleme sadece bu kalkan üzerinden yapılır
-            });
+    handle: '.widget-overlay',
+    containment: false // Sayfa dışına taşmayı engellemek için bazen bunu true yaparlar, false kalsın.
+});
 
             draggie.on('dragEnd', function() { 
                 db.ref('layout/'+id).update({ x: this.position.x, y: this.position.y }); 
@@ -497,68 +547,137 @@ document.addEventListener('mousedown', (e) => {
 
 
     function saveAndLock() {
-    // ÖNEMLİ: Kaydetmeden önce kalkanları temizle ki kalkanlar veritabanına "widget parçası" gibi kaydedilmesin
-    document.querySelectorAll('.widget-overlay').forEach(el => el.remove());
+    // 1. Draggabilly örneklerini tek tek dönüp son konumlarını bulalım
+    draggies.forEach(d => {
+        // d.element sürüklenen widget'tır
+        const id = d.element.id;
+        
+        // Draggabilly'nin içindeki gerçek x ve y (transform dahil hesaplanmış)
+        // Eğer sürüklenmediyse offset değerlerini al
+        const xPos = d.position.x;
+        const yPos = d.position.y;
+        
+        const w = d.element.offsetWidth;
+        const h = d.element.offsetHeight;
 
+        // Firebase'e kaydet
+        db.ref('layout/' + id).update({
+            x: Math.round(xPos),
+            y: Math.round(yPos),
+            w: Math.round(w),
+            h: Math.round(h)
+        });
+
+        // Draggabilly'yi kapat
+        d.destroy();
+    });
+
+    // 2. Eğer sürüklenmemiş ama boyutu değişmiş (resize) widgetlar varsa onları da kapsayalım
     widgetIds.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         
-        // Butonun boyutlarını sabit tut, diğerlerini olduğu gibi kaydet
-        let w = el.offsetWidth;
-        let h = el.offsetHeight;
-        
-        if(id === 'btn-ban-list') {
-            w = 100; // Butonun yaklaşık genişliği
-            h = 35;  // Butonun yaklaşık yüksekliği
+        // Sadece resize modundakiler için (draggies içinde olmayanlar)
+        if(el.classList.contains('resize-mode-active')) {
+             db.ref('layout/'+id).update({
+                w: el.offsetWidth,
+                h: el.offsetHeight,
+                x: parseInt(el.style.left) || el.offsetLeft,
+                y: parseInt(el.style.top) || el.offsetTop
+            });
         }
-
-        db.ref('layout/'+id).update({ 
-            w: w, 
-            h: h, 
-            x: el.offsetLeft, 
-            y: el.offsetTop 
-        });
+        
+        el.classList.remove('edit-mode-active', 'resize-mode-active');
     });
 
-    alert("Tüm yerleşim ve Banlılar butonu kaydedildi!"); 
-    location.reload();
+    // 3. Kalkanları temizle
+    document.querySelectorAll('.widget-overlay').forEach(el => el.remove());
+    draggies = [];
+
+    alert("Yerleşim kaydedildi!");
+    location.reload(); 
 }
+
+
     async function confirmLogin() { 
-        const n = document.getElementById('nick-input').value.trim(); 
-        const p = document.getElementById('pass-input').value.trim(); 
-        if(!n || !p) return alert("Eksik bilgi!");
-        if(myName.startsWith("Guest")) await db.ref('presence/' + myName).remove();
-        const userRef = db.ref('users/' + n);
-        const snapshot = await userRef.once('value');
-        const userData = snapshot.val();
-        if (userData) {
-            if (userData.password === p) {
-                localStorage.setItem("filiz_chat_nick", n); location.reload(); 
-            } else alert("Şifre yanlış!");
-        } else {
-            if (confirm("Yeni kayıt oluşturulsun mu?")) {
-                await userRef.set({ password: p, role: "Misafir", isVerified: false, color: "#00f2ff" });
-                localStorage.setItem("filiz_chat_nick", n); location.reload();
-            }
-        }
+    const n = document.getElementById('nick-input').value.trim(); 
+    const p = document.getElementById('pass-input').value.trim(); 
+    if(!n || !p) return alert("Eksik bilgi!");
+
+    // Eğer misafir olarak bağlıysa eski misafir kaydını temizle
+    if(myName && myName.startsWith("Guest")) {
+        await db.ref('presence/' + myName).remove();
     }
 
-    function handleAuthClick() { if(myName && !myName.startsWith("Guest")) { if(confirm("Çıkış?")) { localStorage.clear(); sessionStorage.clear(); location.reload(); } } else { document.getElementById('login-modal').style.display = 'flex'; } }
+    const userRef = db.ref('users/' + n);
+    const snapshot = await userRef.once('value');
+    const userData = snapshot.val();
 
+    if (userData) {
+        if (userData.password === p) {
+            // Başarılı Giriş: Bilgileri kaydet ve sayfayı tazele
+            localStorage.setItem("filiz_chat_nick", n); 
+            // Opsiyonel: Giriş yapınca rengini de güncelle
+            if(userData.color) localStorage.setItem("filiz_chat_color", userData.color);
+            location.reload(); 
+        } else {
+            alert("Şifre yanlış!");
+        }
+    } else {
+        if (confirm("Bu nick ile yeni bir kayıt oluşturulsun mu?")) {
+            const newUser = { 
+                password: p, 
+                role: "Misafir", 
+                isVerified: false, 
+                color: "#00f2ff",
+                joinedAt: Date.now()
+            };
+            await userRef.set(newUser);
+            localStorage.setItem("filiz_chat_nick", n); 
+            location.reload();
+        }
+    }
+}
+
+function handleAuthClick() { 
+    // Eğer giriş yapılmışsa (Guest değilse) çıkış yap, yapılmışsa modalı aç
+    if(myName && !myName.startsWith("Guest")) { 
+        if(confirm("Hesabınızdan çıkış yapmak istiyor musunuz?")) { 
+            localStorage.clear(); 
+            sessionStorage.clear(); 
+            location.reload(); 
+        } 
+    } else { 
+        document.getElementById('login-modal').style.display = 'flex'; 
+        document.getElementById('nick-input').focus();
+    } 
+}
 
 // Renk seçildiğinde kapanması için
 function applyColor(c) { 
-    if(myPerms.canUseColors) { 
+    // Yetki kontrolü (Kurucuysa veya yetkisi varsa)
+    if(myRole === "Kurucu" || myPerms.canUseColors === true) { 
         currentColor = c; 
-        document.getElementById('current-color-btn').style.background = c; 
-        localStorage.setItem("filiz_chat_color", c); 
-        db.ref('users/'+myName).update({color:c}); 
-        db.ref('presence/'+myName).update({color:c});
         
-        // SEÇİM YAPILDIĞINDA KAPAT
+        // UI Güncelle
+        const colorBtn = document.getElementById('current-color-btn');
+        if(colorBtn) colorBtn.style.background = c; 
+        
+        // Tarayıcıya kaydet
+        localStorage.setItem("filiz_chat_color", c); 
+        
+        // Firebase Kalıcı Profil Güncelle (Nick rengi için)
+        db.ref('users/' + myName).update({ color: c }); 
+        
+        // Firebase Anlık Liste Güncelle (Online listesi için)
+        db.ref('presence/' + myName).update({ color: c });
+        
+        // Paneli kapat
         document.getElementById('color-dropdown').style.display = 'none';
-    } 
+        console.log("Renk güncellendi: " + c);
+    } else {
+        alert("Renk değiştirme yetkiniz bulunmuyor!");
+    }
 }
 
 // Emoji seçildiğinde kapanması için (initEmojis fonksiyonu içindeki onclick kısmı)

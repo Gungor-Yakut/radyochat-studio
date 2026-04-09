@@ -345,3 +345,13 @@ body {
     z-index: 9999;
     cursor: move;
 }
+
+/* Onay almamış kullanıcılar için mesaj kutusuna özel stil */
+.chat-locked {
+    filter: blur(5px);
+    pointer-events: none;
+    user-select: none;
+}
+.chat-widget, .online-widget, .input-widget, .tools-widget {
+    position: absolute !important; /* Koordinatların çalışması için şart */
+}
