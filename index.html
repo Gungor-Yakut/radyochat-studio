@@ -126,6 +126,7 @@
 
 
     let myName = sessionStorage.getItem("filiz_chat_nick") || "";
+let loginTime = Date.now(); // Sayfa yüklendiği anın zamanını tutar
     let currentColor = localStorage.getItem("filiz_chat_color") || "#00f2ff";
     let isVerified = false, fontSize = 14, myRole = "Misafir", isBold = false, isItalic = false;
     let myPerms = {}; let allRoles = {}; let draggies = [];
@@ -161,7 +162,10 @@ startCounter(); // Sayacı başlat
     
     db.ref('messages').limitToLast(50).on('child_added', s => {
         const d = s.val();
-        
+        // FİLTRE: Eğer mesajın saati, bizim giriş saatimizden (loginTime) küçükse ekrana hiç basma
+    if (d.timestamp && d.timestamp < loginTime) {
+        return; 
+    }
         // 1. EĞER YENİ GELEN BİR SİSTEM MESAJI DEĞİLSE, ESKİ SİSTEM MESAJINI HEMEN SİL
         const oldSystemMsg = win.querySelector('.system-msg');
         if (oldSystemMsg && d.type !== "system") {
@@ -209,9 +213,10 @@ startCounter(); // Sayacı başlat
         });
     }
 
+
+
     document.getElementById('msg').onkeypress = async (e) => { 
     if(e.key === "Enter" && e.target.value.trim() !== "") { 
-        // startAuth içinde zaten isVerified güncellendiği için doğrudan kullanabiliriz
         if(isVerified) { 
             db.ref('messages').push().set({ 
                 u: myName, 
@@ -220,7 +225,7 @@ startCounter(); // Sayacı başlat
                 uc: currentColor, 
                 b: isBold, 
                 i: isItalic,
-                timestamp: Date.now()
+                timestamp: Date.now() // Mesajın atıldığı tam saniye
             }); 
             e.target.value = ""; 
         } else {
