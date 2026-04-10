@@ -125,7 +125,7 @@
 };
 
 
-    let myName = localStorage.getItem("filiz_chat_nick") || sessionStorage.getItem("filiz_chat_nick") || "";
+    let myName = sessionStorage.getItem("filiz_chat_nick") || "";
     let currentColor = localStorage.getItem("filiz_chat_color") || "#00f2ff";
     let isVerified = false, fontSize = 14, myRole = "Misafir", isBold = false, isItalic = false;
     let myPerms = {}; let allRoles = {}; let draggies = [];
@@ -297,6 +297,16 @@ function setupPresence(uid) {
         const ud = s.val() || {};
         myRole = ud.role || "Misafir";
         
+
+// YENİ EKLE: Yetkileri Firebase'den çek
+    if (myRole !== "Kurucu") {
+        const pSnap = await db.ref('permissions/' + myRole).once('value');
+        myPerms = pSnap.val() || {};
+    } else {
+        // Kurucu ise tüm yetkileri true yap
+        myPerms = { canAccessAdmin: true, canBan: true, canKick: true };
+    }
+
         // Presence tablosundaki anlık durumu dinle
         db.ref('presence/' + myName).on('value', ps => {
             const pd = ps.val() || {};
@@ -343,54 +353,74 @@ function setupPresence(uid) {
 
 function loadUsers() {
     db.ref('presence').on('value', s => {
-        const list = document.getElementById('user-list');
-        if (!list) return;
+        const list = document.getElementById('user-list'); 
+        if(!list) return;
         list.innerHTML = "";
-        let users = [];
+        
+        let usersArray = [];
 
-        s.forEach(child => { users.push(child.val()); });
-
-        users.sort((a, b) => {
-            const roleDiff = (rolePriority[b.role] || 0) - (rolePriority[a.role] || 0);
-            return roleDiff !== 0 ? roleDiff : a.name.localeCompare(b.name);
-        });
-
-        users.forEach(ud => {
-            const isF = ud.isVerified === true; // Kalıcı onay
-            const isV = ud.tempVerify === true; // Geçici onay
-            const isApproved = (isF || isV);
-            
-            const row = document.createElement('div');
-            row.className = "online-user-row";
-            
-            // Onay tipine göre ikon belirleme
-            let verifyIcon = "";
-            let verifyClass = "";
-            
-            if (isF) {
-                verifyIcon = "F";
-                verifyClass = "tick-f"; // Mavi/Neon F kutusu
-            } else if (isV) {
-                verifyIcon = "✓";
-                verifyClass = "tick-v"; // Yeşil onay kutusu
+        // 1. Önce tüm kullanıcıları bir diziye topla
+        s.forEach(u => {
+            const ud = u.val();
+            if(ud.name) {
+                usersArray.push(ud);
             }
-
-            row.innerHTML = `
-                <div class="verify-box ${verifyClass}" onclick="quickVerify('${ud.name}', ${isApproved})">
-                    ${verifyIcon}
-                </div>
-                <span class="user-name-label ${isApproved ? '' : 'unverified-text'}" style="color:${ud.color || '#00f2ff'}">
-                    ● ${ud.name}
-                </span>
-            `;
-            list.appendChild(row);
         });
 
+        // 2. Kullanıcıları rütbe önceliğine göre sırala
+        usersArray.sort((a, b) => {
+            const priorityA = rolePriority[a.role] || 0;
+            const priorityB = rolePriority[b.role] || 0;
+            return priorityB - priorityA; 
+        });
 
+        // 3. Sıralanmış listeyi ekrana bas
+        usersArray.forEach(ud => {
+            const isAdmin = (myRole === "Kurucu" || myRole === "Yönetici" || myRole === "Admin" || myRole === "Dj" || (myPerms && myPerms.canAccessAdmin));
+            const hasP = ud.isVerified === true; 
+            const hasT = ud.tempVerify === true; 
+            const isApproved = (hasP || hasT); 
 
-        // Dinleyici sayısını güncelle
+            // Rütbe Filtresi: Üye ve Misafir ise rütbe ismini gösterme
+            const showRole = (ud.role !== "Üye" && ud.role !== "Misafir");
+
+            const div = document.createElement('div'); 
+            div.className = "online-user-row-container";
+            
+            let verifyClass = hasP ? 'tick-f' : (hasT ? 'tick-v' : '');
+            let verifyIcon = hasP ? 'F' : (hasT ? '✓' : '');
+
+            div.innerHTML = `
+                <div class="online-user-row">
+                    <div class="verify-box ${verifyClass}" onclick="quickVerify('${ud.name}', ${isApproved})">
+                        ${verifyIcon}
+                    </div>
+
+                    <span class="user-name-label ${isApproved ? '' : 'unverified-text'}" 
+                          style="color:${ud.color || '#fff'}; cursor:pointer;" 
+                          onclick="toggleUserActions('${ud.name}')">
+                        ● ${ud.name} 
+                        
+                        ${showRole ? `
+                        <small style="opacity:0.6; font-size:10px; text-decoration: none !important; display: inline-block;">
+                            [${ud.role || 'Misafir'}]
+                        </small>
+                        ` : ''}
+                    </span>
+                </div>
+
+                ${isAdmin && ud.name !== myName ? `
+                <div id="actions-${ud.name.replace(/\s+/g, '_')}" class="quick-action-panel">
+                    <div class="action-btn btn-kick" onclick="kickUser('${ud.name}')">SOHBETTEN AT</div>
+                    <div class="action-btn btn-ban" onclick="quickBanUser('${ud.name}')">KALICI BANLA</div>
+                </div>
+                ` : ''}
+            `;
+            list.appendChild(div);
+        });
+
         const countEl = document.getElementById('total-user-count');
-        if (countEl) countEl.innerText = users.length;
+        if (countEl) countEl.innerText = usersArray.length;
     });
 }
 
@@ -616,7 +646,7 @@ async function quickVerify(tNick, isCurrentlyVerified) {
     if (userData) {
         if (userData.password === p) {
             // Başarılı Giriş: Bilgileri kaydet ve sayfayı tazele
-            localStorage.setItem("filiz_chat_nick", n); 
+            sessionStorage.setItem("filiz_chat_nick", n);
             // Opsiyonel: Giriş yapınca rengini de güncelle
             if(userData.color) localStorage.setItem("filiz_chat_color", userData.color);
             location.reload(); 
@@ -633,7 +663,7 @@ async function quickVerify(tNick, isCurrentlyVerified) {
                 joinedAt: Date.now()
             };
             await userRef.set(newUser);
-            localStorage.setItem("filiz_chat_nick", n); 
+            sessionStorage.setItem("filiz_chat_nick", n); 
             location.reload();
         }
     }
@@ -643,7 +673,7 @@ function handleAuthClick() {
     // Eğer giriş yapılmışsa (Guest değilse) çıkış yap, yapılmışsa modalı aç
     if(myName && !myName.startsWith("Guest")) { 
         if(confirm("Hesabınızdan çıkış yapmak istiyor musunuz?")) { 
-            localStorage.clear(); 
+            sessionStorage.clear(); 
             sessionStorage.clear(); 
             location.reload(); 
         } 
@@ -716,54 +746,62 @@ function initEmojis() {
     }
     
 async function quickBanUser(tNick) {
-    // 1. Hedefin verilerini çek
+    // 1. Hedefin verilerini (rütbesini) çek
     const targetSnap = await db.ref('presence/' + tNick).once('value');
     const targetData = targetSnap.val();
     
-    if(!targetData) return alert("Kullanıcı bulunamadı.");
+    if(!targetData) return alert("Kullanıcı aktif listede bulunamadı.");
 
+    // Rütbe Puanlarını Hesapla
     const myRank = rolePriority[myRole] || 0;
     const targetRank = rolePriority[targetData.role] || 0;
 
-    // Son Güvenlik Kontrolü: Rütbe yetiyor mu?
-    if (myRank <= targetRank) {
-        alert("Hata: Kendi rütbenizdeki veya üst rütbedeki birini banlayamazsınız!");
-        return;
+    // --- HİERARŞİ SİSTEMİ GÜNCELLEMESİ ---
+    // Kurucu her zaman banlayabilir, ama diğerleri kendi rütbesini veya üstünü banlayamaz.
+    if (myRole !== "Kurucu") {
+        if (myRank < targetRank) {
+            alert(`Hata: ${tNick} sizden üst bir rütbede (${targetData.role}). İşlem engellendi!`);
+            return;
+        }
+        if (myRank === targetRank) {
+            alert(`Hata: ${tNick} ile aynı rütbedesiniz. Kendi rütbe arkadaşınızı banlayamazsınız!`);
+            return;
+        }
     }
 
     if(!confirm(`${tNick} kullanıcısını banlamak istediğinize emin misiniz?`)) return;
 
-    // 2. IP bilgisini user_registry'den al (checkBanStatus içinde kayıt ediyordun)
+    // 2. IP bilgisini user_registry'den al
     const regSnap = await db.ref('user_registry/' + tNick).once('value');
     if(regSnap.exists() && regSnap.val().last_ip) {
         const safeIp = regSnap.val().last_ip.replace(/\./g, '_');
         
-        // Banla
+        // Veritabanına Ban Kaydı At
         await db.ref('banned_ips/' + safeIp).set({ 
             nick: tNick, 
             bannedBy: myName, 
             date: Date.now() 
         });
 
-        // Sistem mesajı gönder
-        db.ref('messages').push().set({ 
-            m: `🚫 ${tNick}, ${myName} tarafından uzaklaştırıldı.`, 
-            type: "system" 
-        });
+        // --- LİSTEDEN ANINDA SİLME ---
+        // Kullanıcıyı online listesinden (presence) anında siler
+        await db.ref('presence/' + tNick).remove();
         
-        alert("Kullanıcı başarıyla banlandı.");
+        // --- SESSİZ BAN GÜNCELLEMESİ ---
+        // Buraya sistem mesajı eklemiyoruz ki sayfa yenilendikçe o uyarılar birikmesin.
+        
+        alert(`${tNick} başarıyla uzaklaştırıldı.`);
     } else {
-        alert("Kullanıcının IP adresi sistemde kayıtlı değil, sadece isimle banlanamaz.");
+        alert("Kullanıcının IP adresi sistemde kayıtlı değil, işlem yapılamadı.");
     }
 }
 
-// Enter tuşuna basılıp basılmadığını kontrol eden fonksiyon
+// Enter tuşuna basılıp basılmadığını kontrol eden fonksiyon (Aynen Korundu)
 function checkEnter(event) {
     if (event.key === "Enter") {
         confirmLogin();
     }
 }
-
 
 // Paneli Aç/Kapat
 function toggleUserActions(nick) {
@@ -906,6 +944,52 @@ function banUser(targetIp) {
         alert("Bu işlemi yapmaya yetkiniz bulunmuyor!");
     }
 }
+
+function startHeartbeat() {
+    // Her 30 saniyede bir varlığını güncelle
+    setInterval(() => {
+        if (typeof myName !== 'undefined' && myName) {
+            db.ref('presence/' + myName).update({
+                lastSeen: Date.now(),
+                status: "online"
+            });
+        }
+    }, 30000); 
+}
+
+// Sayfa yüklendiğinde çalışan ana bloğun içine koyabilirsin
+db.ref(".info/connected").on("value", (snap) => {
+    if (snap.val() === true && typeof myName !== 'undefined' && myName) {
+        const presenceRef = db.ref('presence/' + myName);
+        
+        // Verilerini tekrar yazdır (Sıralama ve bilgiler bozulmasın)
+        presenceRef.set({
+            name: myName,
+            role: myRole || "Misafir",
+            color: myColor || "#fff",
+            isVerified: (typeof hasP !== 'undefined' ? hasP : false),
+            tempVerify: (typeof hasT !== 'undefined' ? hasT : false),
+            lastSeen: Date.now()
+        });
+
+        // Koptuğunda silinmesini sağla
+        presenceRef.onDisconnect().remove();
+        
+        // Bağlantı sağlandığına göre nabız sistemini de başlat
+        startHeartbeat();
+    }
+});
+
+document.addEventListener("visibilitychange", function() {
+    if (document.visibilityState === 'visible') {
+        if (typeof myName !== 'undefined' && myName) {
+            db.ref('presence/' + myName).update({ 
+                lastSeen: Date.now(),
+                status: "active"
+            });
+        }
+    }
+});
 </script>
 </body>
 </html>
