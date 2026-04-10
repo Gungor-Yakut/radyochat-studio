@@ -162,8 +162,10 @@ startCounter(); // Sayacı başlat
     
     db.ref('messages').limitToLast(50).on('child_added', s => {
         const d = s.val();
-        // FİLTRE: Eğer mesajın saati, bizim giriş saatimizden (loginTime) küçükse ekrana hiç basma
-    if (d.timestamp && d.timestamp < loginTime) {
+        // GÜÇLENDİRİLMİŞ FİLTRE:
+    // 1. Eğer mesajın zamanı girişinden önceyse GÖSTERME
+    // 2. Eğer mesajın zamanı hiç yoksa (eski mesaj demektir) yine GÖSTERME
+    if (!d.timestamp || d.timestamp < loginTime) {
         return; 
     }
         // 1. EĞER YENİ GELEN BİR SİSTEM MESAJI DEĞİLSE, ESKİ SİSTEM MESAJINI HEMEN SİL
