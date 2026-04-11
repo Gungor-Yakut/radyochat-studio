@@ -489,11 +489,12 @@ function loadUsers() {
     }
 
     // 5. Taşıma ve Yerleşim Ayarları
-    if(canMove) { 
-        addMenuItem(menu, "✥ TAŞIMA MODU", () => setEditMode('move')); 
-        addMenuItem(menu, "⤗ BOYUTLANDIRMA MODU", () => setEditMode('resize')); 
-        addMenuItem(menu, "✔ KAYDET VE KİLİTLE", () => saveAndLock(), "menu-success"); 
-    }
+    // createContextMenu fonksiyonu içindeki 5. maddeyi şu şekilde kısıtla:
+if(canMove && myRole !== "Üye" && myRole !== "Misafir") { 
+    addMenuItem(menu, "✥ TAŞIMA MODU", () => setEditMode('move'));  
+    addMenuItem(menu, "⤗ BOYUTLANDIRMA MODU", () => setEditMode('resize'));  
+    addMenuItem(menu, "✔ KAYDET VE KİLİTLE", () => saveAndLock(), "menu-success");  
+}
 
     // Menüde en az bir seçenek varsa göster
     if(menu.innerHTML !== "") {
@@ -565,6 +566,7 @@ async function quickVerify(tNick, isCurrentlyVerified) {
 }
 
     function setEditMode(type) {
+        if (myRole !== "Kurucu" && myRole !== "Teknik Servis") return alert("Yetkiniz yok!");
     // Önce varsa eski kalkanları ve sürükleme özelliklerini temizle
     draggies.forEach(d => d.destroy()); 
     draggies = [];
