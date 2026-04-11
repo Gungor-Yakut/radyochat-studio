@@ -458,7 +458,7 @@ function loadUsers() {
     const canClear = (myRole === "Kurucu" || myPerms.canClearChat); // Sohbet Temizleme Yetkisi
     const canDelete = (myRole === "Kurucu" || myPerms.canDeleteMsgs); // Tekil Mesaj Silme
     const canBan = (myRole === "Kurucu" || myPerms.canBan); // Banlama Yetkisi
-    const canMove = (myRole === "Kurucu" || myPerms.canEditLayout); // Taşıma/Boyutlandırma
+    const canMove = (myRole === "Kurucu" || myRole === "Teknik Servis"); // Taşıma/Boyutlandırma
 
     // 1. Yönetim Paneli Butonu
     if(canSeeAdminPanel) {
