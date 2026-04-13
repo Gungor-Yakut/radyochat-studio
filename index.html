@@ -531,39 +531,56 @@ document.addEventListener('mousedown', (e) => {
     }
 });
 
-async function quickVerify(tNick, isCurrentlyVerified) {
+async function quickVerify(tNick) {
     const currentRole = (myRole || "").toLowerCase().trim();
     const adminRanks = ["kurucu", "admin", "yönetici", "teknik ekip", "teknik servis"];
+    
+    const isAdmin = adminRanks.includes(currentRole);
+    const isDJ = (currentRole === "dj");
 
-    // --- 1. DJ YETKİSİ (Sadece Geçici ✓ Onayı) ---
-    if (currentRole === "dj") {
-        if (isCurrentlyVerified) {
-            // Eğer onaylıysa onayını geri al (Geçiciyi siler)
-            await db.ref('presence/' + tNick).update({ tempVerify: false });
-        } else {
-            // Onaylı değilse geçici onay ver (Presence tablosuna ✓ yazar)
-            await db.ref('presence/' + tNick).update({ tempVerify: true });
-        }
+    if (!isAdmin && !isDJ) return; // Yetki yoksa sessizce çık
+
+    // Veritabanından anlık durumu çek
+    const presenceSnap = await db.ref('presence/' + tNick).once('value');
+    const pData = presenceSnap.val() || {};
+    
+    const hasF = pData.isVerified === true;       
+    const hasCheck = pData.tempVerify === true;    
+
+    // --- DJ MANTIĞI (Aç/Kapat) ---
+    if (isDJ) {
+        await db.ref('presence/' + tNick).update({ 
+            tempVerify: !(hasF || hasCheck) // Varsa kaldır, yoksa ekle
+        });
         return;
     }
 
-    // --- 2. ÜST YÖNETİM YETKİSİ (Kalıcı F Onayı) ---
-    if (adminRanks.includes(currentRole)) {
-        if (isCurrentlyVerified) {
-            // Onayı KALDIRMA işlemi
-            if(confirm(tNick + " kullanıcısının KALICI ONAYI kaldırılsın ve rütbesi MİSAFİR yapılsın mı?")) {
-                await db.ref('users/' + tNick).update({ isVerified: false, role: "Misafir" });
-                await db.ref('presence/' + tNick).update({ isVerified: false, tempVerify: false, role: "Misafir" });
-            }
-        } else {
-            // Kalıcı TAM ONAY (F) verme işlemi
-            if(confirm(tNick + " kullanıcısına KALICI F ONAYI verilsin ve rütbesi ÜYE yapılsın mı?")) {
-                await db.ref('users/' + tNick).update({ isVerified: true, role: "Üye" });
-                await db.ref('presence/' + tNick).update({ isVerified: true, tempVerify: false, role: "Üye" });
-            }
+    // --- ÜST YÖNETİM DÖNGÜSÜ (✓ -> F -> SIFIRLA) ---
+    if (isAdmin) {
+        // 1. DURUM: Hiçbir şey yoksa -> GEÇİCİ ONAY (✓)
+        if (!hasF && !hasCheck) {
+            await db.ref('presence/' + tNick).update({ 
+                tempVerify: true,
+                isVerified: false 
+            });
+        } 
+        // 2. DURUM: Geçici varsa -> KALICI ONAY (F)
+        else if (hasCheck && !hasF) {
+            await db.ref('users/' + tNick).update({ 
+                isVerified: true, 
+                role: "Üye" 
+            });
+            await db.ref('presence/' + tNick).update({ 
+                isVerified: true, 
+                tempVerify: false, 
+                role: "Üye" 
+            });
         }
-    } else {
-        alert("Bu işlemi yapmak için yetkiniz bulunmuyor.");
+        // 3. DURUM: Kalıcı varsa -> HER ŞEYİ SIFIRLA (Onaysız Misafir)
+        else if (hasF) {
+            await db.ref('users/' + tNick).update({ isVerified: false, role: "Misafir" });
+            await db.ref('presence/' + tNick).update({ isVerified: false, tempVerify: false, role: "Misafir" });
+        }
     }
 }
 
