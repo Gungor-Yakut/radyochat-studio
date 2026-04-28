@@ -394,23 +394,32 @@ body {
     position: absolute !important; /* Koordinatların çalışması için şart */
 }
 /* Widget'ları ekranın ortasına zorla getirir */
+/* Sohbet Alanı - Sol Orta */
 .chat-widget { 
     top: 50px !important; 
-    left: 10px !important; 
+    left: 20px !important; 
     width: 350px !important; 
-    height: 500px !important; 
-    display: flex !important; 
-    opacity: 1 !important; 
+    height: 450px !important; 
 }
 
+/* Kullanıcı Listesi - Sağ Üst */
+.online-widget { 
+    top: 50px !important; 
+    right: 20px !important; 
+    width: 250px !important; 
+    height: 400px !important; 
+}
+
+/* Mesaj Yazma Alanı - Alt Orta */
 .input-widget { 
-    bottom: 20px !important; 
-    left: 10px !important; 
-    width: 350px !important; 
-    display: flex !important; 
-    opacity: 1 !important;
+    bottom: 30px !important; 
+    left: 50% !important; 
+    transform: translateX(-50%) !important;
+    width: 500px !important; 
 }
 
-#login-modal { 
-    display: flex !important; /* Eğer giriş ekranı gelmiyorsa bunu ekleyin */
+/* Araçlar (Emoji/Renk) - Sağ Alt */
+.tools-widget { 
+    bottom: 30px !important; 
+    right: 20px !important; 
 }
