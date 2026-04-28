@@ -1,6 +1,4 @@
-/* Filiz Yeşili FM - Modern Glassmorphism Style v48.0 
-    Tüm görsel yapı korunmuş, yeni üyelik sistemine uyarlanmıştır.
-*/
+/* Filiz Yeşili FM - Modern Glassmorphism Style v48.0 */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -32,7 +30,47 @@ body {
     border-radius: 20px; 
     width: 340px; 
     text-align: center;
-    box-shadow: 0 0 30px rgba(0, 242, 255, 0.2);
+}
+
+/* --- WIDGET SİSTEMİ (ZORUNLU GÖRÜNÜR) --- */
+.widget {
+    position: absolute !important;
+    background: rgba(15, 15, 15, 0.7) !important; /* Arka plan görünür yapıldı */
+    backdrop-filter: blur(10px) !important; 
+    border: 1px solid rgba(0, 242, 255, 0.5);
+    border-radius: 15px; 
+    display: flex; 
+    flex-direction: column; 
+    z-index: 100;
+    opacity: 1 !important; /* Gizliliği devre dışı bırakır */
+    visibility: visible !important; 
+    pointer-events: all !important;
+}
+
+/* Koordinatların çalışması için gerekli tanımlar */
+.chat-widget, .online-widget, .input-widget, .tools-widget {
+    position: absolute !important;
+}
+
+#chat-window { flex: 1; overflow-y: auto; padding: 15px; scrollbar-width: none; }
+#user-list { padding: 15px; overflow-y: auto; scrollbar-width: none; }
+
+/* --- DİĞER STİLLER --- */
+.mini-tools { display: flex; gap: 8px; padding: 10px; justify-content: center; align-items: center; }
+.mini-tools button {
+    background: rgba(255, 255, 255, 0.05); 
+    border: 1px solid #00f2ff;
+    color: #00f2ff; 
+    width: 34px; height: 34px; border-radius: 6px; cursor: pointer;
+}
+
+#msg { width: 100%; background: transparent; border: none; color: #fff; padding: 14px; outline: none; }
+
+.unverified-text { text-decoration: line-through; opacity: 0.5; color: #ff4b2b; }
+
+#context-menu { 
+    position: fixed; display: none; background: #0a0a0a; border: 1px solid #00f2ff; 
+    z-index: 9999999; border-radius: 8px; 
 }
 
 /* Yeni Giriş Inputları */
