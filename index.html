@@ -8,15 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/draggabilly@3/dist/draggabilly.pkgd.min.js"></script>
     <style>
-        .<style>
-    /* opacity: 0 kaldırıldı, widget'lar direkt görünür olacak */
-    .widget { position: absolute; min-width: 50px; min-height: 50px; overflow: hidden; opacity: 1 !important; }
-    .edit-mode-active { outline: 2px dashed #00f2ff !important; box-shadow: 0 0 15px #00f2ff !important; cursor: move !important; z-index: 10000 !important; }
-    .resize-mode-active { outline: 2px dashed #ffcc00 !important; cursor: nwse-resize !important; overflow: auto !important; resize: both !important; }
-    #login-modal { z-index: 99999; }
-</style>
-
-
+        .widget { position: absolute; min-width: 50px; min-height: 50px; overflow: hidden; opacity: 0; transition: opacity 0.5s; }
         .edit-mode-active { outline: 2px dashed #00f2ff !important; box-shadow: 0 0 15px #00f2ff !important; cursor: move !important; z-index: 10000 !important; }
         .resize-mode-active { outline: 2px dashed #ffcc00 !important; cursor: nwse-resize !important; overflow: auto !important; resize: both !important; }
         #login-modal { z-index: 99999; }
@@ -35,6 +27,334 @@
         .verify-box { width: 18px; height: 18px; border: 1px solid #444; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; margin-right: 8px; }
         .tick-f { background: #00f2ff; color: #000; border-color: #00f2ff; }
         .tick-v { background: #00fc00; color: #000; border-color: #00fc00; }
+    </style>
+</head>
+<body id="main-body">
+
+<div id="login-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <h2 style="color:#00f2ff; margin-bottom:20px;">SİSTEME GİRİŞ</h2>
+        <input type="text" id="nick-input" placeholder="Nick..." class="login-input" onkeyup="checkEnter(event)">
+        <input type="password" id="pass-input" placeholder="Şifre..." class="login-input" onkeyup="checkEnter(event)">
+        
+        <div style="margin: 10px 0; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <input type="checkbox" id="remember-me" checked> 
+            <label for="remember-me" style="color:#ccc; font-size:12px; cursor:pointer;">Beni Hatırla</label>
+        </div>
+        <button onclick="confirmLogin()" style="width:100%; padding:12px; background:#00f2ff; border:none; border-radius:10px; font-weight:bold; cursor:pointer; color:#000;">GİRİŞ YAP / KAYIT OL</button>
+        <button onclick="closeLogin()" style="width:100%; padding:8px; background:transparent; border:1px solid #444; border-radius:10px; color:#888; cursor:pointer; margin-top:10px; font-size:11px;">KAPAT</button>
+    </div>
+</div>
+
+<div id="context-menu"></div>
+
+<div class="main-stage">
+    <div class="widget" id="login-widget"><div id="auth-btn" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; color:#00f2ff;" onclick="handleAuthClick()">GİRİŞ YAP</div></div>
+    <div class="widget" id="chat-widget"><div id="chat-window"></div></div>
+    <div class="widget" id="tools-widget">
+        <div class="mini-tools">
+            <div id="current-color-btn" style="background:#00f2ff;" onclick="togglePanel('color-dropdown')"></div>
+            <div id="color-dropdown" style="display:none;">
+                <div class="color-grid">
+                    <div class="grid-dot" style="background:#ffffff" onclick="applyColor('#ffffff')"></div>
+                    <div class="grid-dot" style="background:#000000" onclick="applyColor('#000000')"></div>
+                    <div class="grid-dot" style="background:#00007f" onclick="applyColor('#00007f')"></div>
+                    <div class="grid-dot" style="background:#009300" onclick="applyColor('#009300')"></div>
+                    <div class="grid-dot" style="background:#ff0000" onclick="applyColor('#ff0000')"></div>
+                    <div class="grid-dot" style="background:#7f0000" onclick="applyColor('#7f0000')"></div>
+                    <div class="grid-dot" style="background:#9c009c" onclick="applyColor('#9c009c')"></div>
+                    <div class="grid-dot" style="background:#fc7f00" onclick="applyColor('#fc7f00')"></div>
+                    <div class="grid-dot" style="background:#ffff00" onclick="applyColor('#ffff00')"></div>
+                    <div class="grid-dot" style="background:#00fc00" onclick="applyColor('#00fc00')"></div>
+                    <div class="grid-dot" style="background:#009393" onclick="applyColor('#009393')"></div>
+                    <div class="grid-dot" style="background:#00ffff" onclick="applyColor('#00ffff')"></div>
+                    <div class="grid-dot" style="background:#0000fc" onclick="applyColor('#0000fc')"></div>
+                    <div class="grid-dot" style="background:#ff00ff" onclick="applyColor('#ff00ff')"></div>
+                    <div class="grid-dot" style="background:#7f7f7f" onclick="applyColor('#7f7f7f')"></div>
+                    <div class="grid-dot" style="background:#d2d2d2" onclick="applyColor('#d2d2d2')"></div>
+
+          <div class="grid-dot" style="background:#191970" onclick="applyColor('#191970')"></div>
+                    <div class="grid-dot" style="background:#001F3F" onclick="applyColor('#001F3F')"></div>
+                    <div class="grid-dot" style="background:#0A192F" onclick="applyColor('#0A192F')"></div>
+                    <div class="grid-dot" style="background:#003153" onclick="applyColor('#003153')"></div>
+                    <div class="grid-dot" style="background:#1B263B" onclick="applyColor('#1B263B')"></div>
+                    <div class="grid-dot" style="background:#001F3F" onclick="applyColor('#001F3F')"></div>
+                    <div class="grid-dot" style="background:#1B263B" onclick="applyColor('#1B263B')"></div>
+                    <div class="grid-dot" style="background:#415S77" onclick="applyColor('#415S77')"></div>
+                    <div class="grid-dot" style="background:#0A192F" onclick="applyColor('#0A192F')"></div>
+                    <div class="grid-dot" style="background:#001F3F" onclick="applyColor('#001F3F')"></div>
+                    <div class="grid-dot" style="background:#0033FF" onclick="applyColor('#0033FF')"></div>
+                    <div class="grid-dot" style="background:#0047AB" onclick="applyColor('#0047AB')"></div>
+                    <div class="grid-dot" style="background:#082567" onclick="applyColor('#082567')"></div>
+                    <div class="grid-dot" style="background:#1034A6" onclick="applyColor('#1034A6')"></div>
+                    <div class="grid-dot" style="background:#002366" onclick="applyColor('#002366')"></div>
+                                         
+                </div>
+                <button onclick="document.getElementById('adv-picker').click()" style="width:100%; padding:5px; background:#222; border:1px solid #444; color:#fff; font-size:10px; margin-top:5px;">+ ÖZEL RENK</button>
+                <input type="color" id="adv-picker" style="display:none" oninput="applyColor(this.value)">
+            </div>
+            <button onclick="togglePanel('emoji-dropdown')">😊</button>
+            <div id="emoji-dropdown" style="display:none;"><div class="emoji-grid" id="emoji-list"></div></div>
+            <button id="btn-bold" onclick="toggleStyle('bold')">B</button>
+            <button id="btn-italic" onclick="toggleStyle('italic')" title="İtalik"><i>I</i></button>
+            <button onclick="changeFontSize(2)">A +</button>
+            <button onclick="changeFontSize(-2)">A -</button>
+            <span id="fs-indicator">14px</span>
+        </div>
+    </div>
+    <div class="widget" id="input-widget"><input type="text" id="msg" placeholder="Önce giriş yapın..." disabled></div>
+    <div class="widget" id="online-widget"><div id="user-list"></div></div>
+</div>
+
+<div class="widget" id="count-widget" style="width:200px; height:40px; top:10px; left:420px; opacity:1;">
+    <div class="user-count-box">Dinleyici: <span id="total-user-count">0</span></div>
+</div>
+
+<button id="btn-ban-list" onclick="toggleBanList()" style="display:none; position: fixed; top: 10px; right: 10px; z-index: 9999; background:rgba(255, 75, 43, 0.8); border:1px solid #ff4b2b; color:#fff; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; box-shadow: 0 0 10px rgba(255,75,43,0.5);">BANLILAR</button>
+
+<button id="btn-ban-list" class="widget" onclick="toggleBanList()" 
+    style="display:none; position:relative; background:rgba(255, 75, 43, 0.8); border:1px solid #ff4b2b; color:#fff; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; z-index: 9999; overflow:hidden;">
+    🚫 BANLILAR
+</button>
+<div id="ban-list-popup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:280px; background:rgba(15,15,15,0.98); border:2px solid #ff4b2b; border-radius:12px; z-index:100002; padding:20px; box-shadow:0 0 30px rgba(255,75,43,0.5); backdrop-filter: blur(10px);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,75,43,0.3); padding-bottom:10px;">
+        <h3 style="margin:0; color:#ff4b2b; font-size:14px;">YASAKLI LİSTESİ</h3>
+        <span onclick="toggleBanList()" style="cursor:pointer; color:#888; font-size:20px; font-weight:bold;">×</span>
+    </div>
+    <div id="ban-items-content" style="max-height:300px; overflow-y:auto; padding-right:5px;">
+        </div>
+</div>
+
+<script>
+    const firebaseConfig = { apiKey: "AIzaSyBeMsSLTbpmjzd7HrVKjhFIVAQ_goJsLUg", authDomain: "flat-chat-fa830.firebaseapp.com", databaseURL: "https://flat-chat-fa830-default-rtdb.europe-west1.firebasedatabase.app", projectId: "flat-chat-fa830" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const rootNick = "Filiz Yeşili FM";
+
+    const rolePriority = { 
+    "Kurucu": 100, "KURUCU": 100,
+    "Yönetici": 90, "YÖNETİCİ": 90, "Yonetici": 90,
+    "Admin": 80, "ADMİN": 80,
+    "Teknik Servis": 70, "TEKNİK SERVİS": 70, "Teknik Ekip": 70,
+    "Dj": 60, "DJ": 60,
+    "Üye": 20, "ÜYE": 20, "Uye": 20,
+    "Misafir": 10, "MİSAFİR": 10, "Misafir": 10 
+};
+
+
+    let myName = sessionStorage.getItem("filiz_chat_nick") || "";
+let loginTime = Date.now(); // Sayfa yüklendiği anın zamanını tutar
+    let currentColor = localStorage.getItem("filiz_chat_color") || "#00f2ff";
+    let isVerified = false, fontSize = 14, myRole = "Misafir", isBold = false, isItalic = false;
+    let myPerms = {}; let allRoles = {}; let draggies = [];
+    const widgetIds = ['chat-widget', 'input-widget', 'online-widget', 'login-widget', 'tools-widget', 'count-widget', 'btn-ban-list'];
+
+    window.onload = () => { 
+        initEmojis(); 
+        loadLayout(); 
+        fetchRolesAndUsers(); 
+        checkBanStatus();
+        document.getElementById('current-color-btn').style.background = currentColor;
+
+        if (!myName) {
+            const randomId = Math.floor(1000 + Math.random() * 9000);
+            myName = "Guest" + randomId;
+            sessionStorage.setItem("filiz_chat_nick", myName);
+        }
+        startAuth(); 
+startCounter(); // Sayacı başlat
+    };
+
+    function loadMessages() {
+    const win = document.getElementById('chat-window');
+    if (!win) return; // Eğer chat penceresi yoksa dur
+    db.ref('messages').off(); 
+    win.innerHTML = "";
+
+    // ONAY KONTROLÜ
+    if (!isVerified) {
+        win.innerHTML = `<div class="system-msg" style="border:none; background:none; color:#ff4b2b;">🔒 Sohbeti görmek için onay bekleniyor...</div>`;
+        return;
+    }
+    
+    db.ref('messages').limitToLast(50).on('child_added', s => {
+        const d = s.val();
+        // GÜÇLENDİRİLMİŞ FİLTRE:
+    // 1. Eğer mesajın zamanı girişinden önceyse GÖSTERME
+    // 2. Eğer mesajın zamanı hiç yoksa (eski mesaj demektir) yine GÖSTERME
+    if (!d.timestamp || d.timestamp < loginTime) {
+        return; 
+    }
+        // 1. EĞER YENİ GELEN BİR SİSTEM MESAJI DEĞİLSE, ESKİ SİSTEM MESAJINI HEMEN SİL
+        const oldSystemMsg = win.querySelector('.system-msg');
+        if (oldSystemMsg && d.type !== "system") {
+            oldSystemMsg.remove();
+        }
+
+        const mRow = document.createElement('div');
+        mRow.id = "msg-" + s.key;
+        
+        // --- SİSTEM MESAJI BLOĞU ---
+        if(d.type === "system") {
+            mRow.className = "system-msg";
+            mRow.innerText = d.m;
+            win.prepend(mRow);
+
+            // 2. SİSTEM MESAJI 10 SANİYE SONRA KENDİLİĞİNDEN SİLİNSİN
+            setTimeout(() => {
+                const target = document.getElementById("msg-" + s.key);
+                if (target) {
+                    target.style.transition = "opacity 0.8s";
+                    target.style.opacity = "0";
+                    setTimeout(() => target.remove(), 800);
+                }
+            }, 10000); // 10 saniye
+            
+            return; // Sistem mesajıysa burada dur, aşağıya (normal mesaj kısmına) geçme
+        }
+
+        // --- NORMAL MESAJ BLOĞU ---
+        mRow.className = "chat-msg-row";
+        const nCol = d.uc || d.c || "#00f2ff";
+        const italicStyle = d.i ? "font-style: italic; display: inline-block; transform: skewX(-15deg); margin-left: 3px;" : "";
+        
+        mRow.style.cssText = `color:${d.c}; font-weight:${d.b ? 'bold' : 'normal'}; font-size:${fontSize}px; margin-bottom: 5px;`;
+        mRow.innerHTML = `<b style="color:${nCol}; margin-right: 5px; font-style: normal;">${d.u} :</b><span style="${italicStyle}">${d.m}</span>`;
+        
+        mRow.oncontextmenu = (e) => createContextMenu(e, { msgKey: s.key, name: d.u });
+        win.prepend(mRow);
+    });
+
+        
+        db.ref('messages').on('child_removed', s => { 
+            const el = document.getElementById("msg-" + s.key); 
+            if(el) el.remove(); 
+        });
+    }
+
+
+
+    document.getElementById('msg').onkeypress = async (e) => { 
+    if(e.key === "Enter" && e.target.value.trim() !== "") { 
+        if(isVerified) { 
+            db.ref('messages').push().set({ 
+                u: myName, 
+                m: e.target.value, 
+                c: currentColor, 
+                uc: currentColor, 
+                b: isBold, 
+                i: isItalic,
+                timestamp: Date.now() // Mesajın atıldığı tam saniye
+            }); 
+            e.target.value = ""; 
+        } else {
+            alert("Sohbet izniniz henüz onaylanmamış!");
+        }
+    } 
+};
+
+// Dinleyici Sayısını Dinleyen Fonksiyon
+    function startCounter() {
+        const countRef = db.ref('presence');
+        
+        countRef.on('value', (snapshot) => {
+            // snapshot.numChildren() presence altındaki toplam kayıt sayısını verir
+            const totalUsers = snapshot.numChildren();
+            
+            const countElement = document.getElementById('total-user-count');
+            if (countElement) {
+                countElement.innerText = totalUsers || 0;
+            }
+        });
+    }
+
+    function loadLayout() {
+    db.ref('layout').once('value', s => {
+        const d = s.val() || {};
+        widgetIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && d[id]) {
+                // Koordinatları ve boyutları px olarak uygula
+                el.style.left = d[id].x + "px";
+                el.style.top = d[id].y + "px";
+                el.style.width = d[id].w + "px";
+                el.style.height = d[id].h + "px";
+                // Önemli: Transform kalıntılarını sıfırla
+                el.style.transform = "none"; 
+            }
+            if (el) el.style.opacity = "1";
+        });
+    });
+}
+
+
+function setupPresence(uid) {
+    // Kullanıcının online olduğu konum
+    const userStatusRef = db.ref('presence/' + uid);
+
+    // Firebase'in özel .info/connected yolu: Bağlantı durumunu kontrol eder
+    db.ref('.info/connected').on('value', (snapshot) => {
+        if (snapshot.val() === false) {
+            return; // Bağlantı yoksa bir şey yapma
+        }
+
+        // Bağlantı koptuğunda (tarayıcı kapandığında) yapılacak işlem:
+        // Sunucuya "benim verimi SİL" talimatı veriyoruz
+        userStatusRef.onDisconnect().remove().then(() => {
+            // Bağlantı şu an aktif, online verisini yazalım
+            userStatusRef.set({
+                name: uid,
+                role: myRole,
+                color: currentColor,
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
+        });
+    });
+}
+
+    async function startAuth() {
+    const presenceRef = db.ref('presence/' + myName);
+    presenceRef.onDisconnect().remove();
+
+    // Kullanıcı verilerini ve onay durumunu dinle
+    db.ref('users/' + myName).on('value', async s => {
+        const ud = s.val() || {};
+        myRole = ud.role || "Misafir";
+        
+
+// YENİ EKLE: Yetkileri Firebase'den çek
+    if (myRole !== "Kurucu") {
+        const pSnap = await db.ref('permissions/' + myRole).once('value');
+        myPerms = pSnap.val() || {};
+    } else {
+        // Kurucu ise tüm yetkileri true yap
+        myPerms = { canAccessAdmin: true, canBan: true, canKick: true };
+    }
+
+        // Presence tablosundaki anlık durumu dinle
+        db.ref('presence/' + myName).on('value', ps => {
+            const pd = ps.val() || {};
+            const isF = ud.isVerified === true;
+            const isV = pd.tempVerify === true;
+            isVerified = (isF || isV); 
+
+            const authBtn = document.getElementById('auth-btn');
+            const msgInput = document.getElementById('msg');
+            const toolsWidget = document.getElementById('tools-widget');
+
+            if (ud.password) {
+                authBtn.innerText = "👤 " + myName;
+                authBtn.style.color = "#00fc00";
+            } else {
+                authBtn.innerText = "GİRİŞ YAP";
+            }
+
+            if (isVerified) {
+                if(msgInput) { msgInput.disabled = false; msgInput.placeholder = "Mesajınızı yazın..."; }
+                if(toolsWidget) { toolsWidget.style.opacity = "1"; toolsWidget.style.pointerEvents = "auto"; }
+            } else {
+                if(msgInput) { msgInput.disabled = true; msgInput.placeholder = "Onay bekleniyor..."; }
+                if(toolsWidget) { toolsWidget.style.opacity = "0.3"; toolsWidget.style.point        .tick-v { background: #00fc00; color: #000; border-color: #00fc00; }
     </style>
 </head>
 <body id="main-body">
