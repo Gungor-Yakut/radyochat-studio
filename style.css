@@ -55,12 +55,16 @@ body {
 
 /* --- WIDGET SİSTEMİ (CAM GÖRÜNÜMÜ) --- */
 .widget {
-    position: absolute !important; 
-    background: rgba(0, 0, 0, 0.01) !important; /* Arka plan yok */
-    backdrop-filter: none !important; 
+    position: absolute !important;
+    background: rgba(0, 0, 0, 0.4) !important; /* Görünürlük için hafif arka plan eklendi */
+    backdrop-filter: blur(5px) !important; 
     border-radius: 15px; 
-    border: 1px solid rgba(0, 242, 255, 0.4); /* Kenarlık belirgin */
-    display: flex; flex-direction: column; z-index: 100;
+    border: 1px solid rgba(0, 242, 255, 0.4);
+    display: flex; 
+    flex-direction: column; 
+    z-index: 100;
+    opacity: 1 !important; /* Widgetların görünmemesini engellemek için 1 yapıldı */
+    transition: none !important;
 }
 
 #tools-widget { 
@@ -123,12 +127,6 @@ body {
     font-size: 14px; 
 }
 
-.online-user.unverified { 
-    text-decoration: line-through !important; 
-    opacity: 0.4; 
-    color: #ff4b2b !important; 
-}
-
 /* --- ARAÇ ÇUBUĞU (TOOLS) --- */
 .mini-tools { 
     display: flex; 
@@ -160,18 +158,16 @@ body {
     cursor: pointer; 
     font-weight: bold;
     transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', sans-serif;
 }
 
 .mini-tools button:hover {
     background: rgba(0, 242, 255, 0.2);
 }
 
-.mini-tools button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Segoe UI', sans-serif; /* Harflerin düzgün görünmesi için */
-}
 .active-tool { background: #00f2ff !important; color: #000 !important; }
 #fs-indicator { font-size: 12px; color: #00f2ff; min-width: 35px; text-align: center; font-weight: bold; }
 
@@ -201,7 +197,6 @@ body {
 }
 
 /* --- SAĞ TIK MENÜSÜ --- */
-/* Style kısmındaki context-menu alanını güncelle */
 #context-menu { 
     position: fixed; 
     display: none; 
@@ -209,7 +204,7 @@ body {
     border: 1px solid #00f2ff; 
     color: #fff; 
     padding: 5px 0; 
-    z-index: 1000000 !important; /* Değeri çok yüksek tutuyoruz */
+    z-index: 1000000 !important; 
     min-width: 180px; 
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); 
     border-radius: 8px; 
@@ -237,24 +232,14 @@ body {
 
 .mode-move .widget { cursor: move !important; }
 .mode-resize .widget { overflow: auto !important; resize: both !important; }
-/* --- YENİ ONAY SİSTEMİ STİLLERİ --- */
-.online-user-row { display: flex; align-items: center; gap: 8px; padding: 5px 10px; }
-.verify-box {
-    width: 20px; height: 20px; border: 1px solid rgba(0, 242, 255, 0.4);
-    border-radius: 4px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; font-size: 10px; font-weight: bold; background: rgba(0,0,0,0.3); flex-shrink: 0;
-}
-.tick-f { background: #00f2ff !important; color: #000 !important; border-color: #00f2ff; } /* Kalıcı F */
-.tick-v { color: #00fc00; border-color: #00fc00; } /* Geçici Tik */
-/* Onayı (F veya ✓) olmayan herkesin ismini bu hale getirir */
-/* Onaysız (Guest veya Şifresiz) Kullanıcı Stili */
+
+/* --- ONAYSIIZ KULLANICI STİLLERİ --- */
 .unverified-text { 
-    text-decoration: line-through !important; /* Üzerini çiz */
-    opacity: 0.6 !important;                 /* Hafif şeffaf (kaybolmayacak kadar) */
-    color: #ff4b2b !important;               /* Kırmızımtırak ton */
+    text-decoration: line-through !important; 
+    opacity: 0.6 !important;                 
+    color: #ff4b2b !important;               
 }
 
-/* Online Listesi Satır Düzeni */
 .online-user-row {
     display: flex;
     align-items: center;
@@ -263,31 +248,29 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.verify-box {
+    width: 20px; height: 20px; border: 1px solid rgba(0, 242, 255, 0.4);
+    border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 10px; font-weight: bold; background: rgba(0,0,0,0.3); flex-shrink: 0;
+}
+.tick-f { background: #00f2ff !important; color: #000 !important; border-color: #00f2ff; }
+.tick-v { color: #00fc00; border-color: #00fc00; }
+
 .user-name-label {
     font-size: 13px;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis; /* Çok uzun isimleri keser */
-}
-/* Widget Temel Yapısı - Kaymayı Engelleyen Kesin Çözüm */
-.widget {
-    position: absolute !important;
-    display: flex;
-    flex-direction: column;
-    /* Animasyonları tamamen kapatıyoruz, böylece sürüklenerek gitmezler */
-    transition: none !important; 
-    /* Başlangıçta görünmesinler, JS yerlerini ayarlayınca açacağız */
-    opacity: 0; 
+    text-overflow: ellipsis;
 }
 
-/* Sayıcı (Dinleyici) Kutusu - Widget İçinde */
+/* --- DİĞER BİLEŞENLER --- */
 .user-count-box {
-    background: rgba(255, 255, 255, 0.05); /* Şeffaf arka plan */
+    background: rgba(255, 255, 255, 0.05); 
     border-radius: 8px;
     padding: 10px;
     font-size: 14px;
-    color: #00f2ff; /* Neon Mavi */
+    color: #00f2ff;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -298,13 +281,10 @@ body {
     height: 100%;
 }
 
-
-
 .menu-danger { color: #ff4b2b !important; }
 .menu-success { color: #00fc00 !important; }
 .menu-item { border-bottom: 1px solid rgba(255,255,255,0.1); }
 
-/* Nicke tıklandığında açılan işlem paneli */
 .quick-action-panel {
     display: none;
     background: rgba(20, 20, 20, 0.9);
@@ -317,6 +297,7 @@ body {
     backdrop-filter: blur(5px);
     animation: fadeIn 0.3s ease;
 }
+
 .action-btn {
     padding: 4px 8px;
     font-size: 11px;
@@ -326,32 +307,31 @@ body {
     color: #fff;
     font-weight: bold;
 }
-.btn-kick { background: #ffcc00; color: #000; } /* Sarı: At */
-.btn-ban { background: #ff4b2b; color: #fff; }  /* Kırmızı: Ban */
+.btn-kick { background: #ffcc00; color: #000; }
+.btn-ban { background: #ff4b2b; color: #fff; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
 .system-msg {
-    /* Mevcut kodların... */
-    transition: opacity 0.5s ease; /* Kaybolurken yumuşak gitsin */
+    transition: opacity 0.5s ease;
 }
 
-/* Düzenleme modunda widget'ların üzerine binen koruyucu tabaka */
 .widget-overlay {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background: rgba(0, 242, 255, 0.05); /* Çok hafif bir mavi ton */
+    background: rgba(0, 242, 255, 0.05);
     z-index: 9999;
     cursor: move;
 }
 
-/* Onay almamış kullanıcılar için mesaj kutusuna özel stil */
 .chat-locked {
     filter: blur(5px);
     pointer-events: none;
     user-select: none;
 }
+
+/* Koordinatların doğru çalışması için */
 .chat-widget, .online-widget, .input-widget, .tools-widget {
-    position: absolute !important; /* Koordinatların çalışması için şart */
+    position: absolute !important;
 }
