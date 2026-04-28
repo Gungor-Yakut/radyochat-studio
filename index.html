@@ -8,20 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/draggabilly@3/dist/draggabilly.pkgd.min.js"></script>
     <style>
-    /* opacity: 0 kaldırıldı, widget'lar direkt görünür olacak */
-     /* opacity: 0 olan yeri 1 yaparak zorla görünür kılıyoruz */
-    .widget { 
-        position: absolute; 
-        min-width: 50px; 
-        min-height: 50px; 
-        overflow: hidden; 
-        opacity: 1 !important; /* Burayı 1 ve !important yapın */
-        visibility: visible !important;
-    }
-    .edit-mode-active { outline: 2px dashed #00f2ff !important; box-shadow: 0 0 15px #00f2ff !important; cursor: move !important; z-index: 10000 !important; }
-    .resize-mode-active { outline: 2px dashed #ffcc00 !important; cursor: nwse-resize !important; overflow: auto !important; resize: both !important; }
-    #login-modal { z-index: 99999; }
-
+        .widget { position: absolute; min-width: 50px; min-height: 50px; overflow: hidden; opacity: 0; transition: opacity 0.5s; }
         .edit-mode-active { outline: 2px dashed #00f2ff !important; box-shadow: 0 0 15px #00f2ff !important; cursor: move !important; z-index: 10000 !important; }
         .resize-mode-active { outline: 2px dashed #ffcc00 !important; cursor: nwse-resize !important; overflow: auto !important; resize: both !important; }
         #login-modal { z-index: 99999; }
