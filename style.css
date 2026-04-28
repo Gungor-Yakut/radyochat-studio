@@ -393,3 +393,24 @@ body {
 .chat-widget, .online-widget, .input-widget, .tools-widget {
     position: absolute !important; /* Koordinatların çalışması için şart */
 }
+/* Widget'ları ekranın ortasına zorla getirir */
+.chat-widget { 
+    top: 50px !important; 
+    left: 10px !important; 
+    width: 350px !important; 
+    height: 500px !important; 
+    display: flex !important; 
+    opacity: 1 !important; 
+}
+
+.input-widget { 
+    bottom: 20px !important; 
+    left: 10px !important; 
+    width: 350px !important; 
+    display: flex !important; 
+    opacity: 1 !important;
+}
+
+#login-modal { 
+    display: flex !important; /* Eğer giriş ekranı gelmiyorsa bunu ekleyin */
+}
