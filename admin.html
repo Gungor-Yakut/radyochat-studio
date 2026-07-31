@@ -29,35 +29,80 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         #perm-matrix-table td:first-child { text-align: left; font-weight: bold; position: sticky; left: 0; background: #141416; border-right: 2px solid #222; }
         input[type="checkbox"] { cursor: pointer; transform: scale(1.2); accent-color: var(--neon); }
-    </style>
+   /* CSS kısmındaki ilgili yerleri bununla değiştir */
+.setting-sub-content, 
+.color-type-content, 
+.emoji-type-content { 
+    display: none; 
+}
+
+.setting-sub-content.active, 
+.color-type-content.active, 
+.emoji-type-content.active { 
+    display: block; 
+}
+
+.table-container {
+    max-height: 400px; /* Tablo boyunu sabitle */
+    overflow-y: auto;  /* Dikey kaydırma çubuğu ekle */
+    border: 1px solid #333;
+    position: relative;
+}
+
+/* Başlıkların kaydırırken sabit kalması için */
+.table-container thead th {
+    position: sticky;
+    top: 0;
+    background: #111;
+    z-index: 10;
+}
+ </style>
 </head>
 <body>
 
     <div class="tabs">
         <button class="tab-btn active" onclick="openTab('users-tab', this)">👤 KULLANICI YÖNETİMİ</button>
-        <button class="tab-btn" id="tab-roles" onclick="openTab('roles-tab', this)">🏆 RÜTBE AYARLARI</button>
+        
         <button class="tab-btn" id="tab-perms" onclick="openTab('perms-tab', this)">🔐 YETKİ TABLOSU</button>
         <button class="tab-btn" id="tab-ip" onclick="openTab('ip-tab', this)">🌐 IP GÜNLÜĞÜ</button>
         <button class="tab-btn" id="tab-ban-manage" style="border: 1px solid var(--danger);" onclick="openTab('ban-manage-tab', this)">🚫 BAN YÖNETİMİ</button>
+<button class="tab-btn" id="tab-settings" onclick="openTab('settings-tab', this)">⚙️ SİSTEM AYARLARI</button>
+
+
     </div>
 
     <div id="users-tab" class="tab-content active">
+    <div style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid #222; padding-bottom: 10px;">
+        <button class="tab-btn active" id="sub-btn-unverified" onclick="openUserSubTab('unverified-section', this)">⏳ ONAY BEKLEYENLER</button>
+        <button class="tab-btn" id="sub-btn-verified" onclick="openUserSubTab('verified-section', this)">✅ ONAYLI (F) LİSTESİ</button>
+    </div>
+
+    <div style="margin-bottom: 15px; background: rgba(0,242,255,0.05); padding: 10px; border-radius: 5px; border: 1px solid #222;">
+        <input type="text" id="user-search-input" placeholder="👤 Kullanıcı adı ile ara..." 
+               oninput="filterUserList()" 
+               style="width: 100%; background: #000; color: var(--success); border: 1px solid #444; padding: 10px; border-radius: 5px; font-size: 12px; outline: none;">
+    </div>
+
+    <div id="unverified-section" class="user-sub-content active">
         <div class="table-container">
             <table>
                 <thead><tr><th>Mevcut Nick</th><th>Yeni Nick</th><th>Şifre</th><th>Onay (F)</th><th>Rütbe</th><th>İşlemler</th></tr></thead>
-                <tbody id="user-list"></tbody>
+                <tbody id="unverified-user-list"></tbody>
             </table>
         </div>
     </div>
 
-    <div id="roles-tab" class="tab-content">
+    <div id="verified-section" class="user-sub-content" style="display:none;">
         <div class="table-container">
             <table>
-                <thead><tr><th>Sıra</th><th>Rütbe Adı</th><th>Renk Seç</th><th>Renk Kodu</th><th>İşlem</th></tr></thead>
-                <tbody id="role-list-body"></tbody>
+                <thead><tr><th>Mevcut Nick</th><th>Yeni Nick</th><th>Şifre</th><th>Onay (F)</th><th>Rütbe</th><th>İşlemler</th></tr></thead>
+                <tbody id="verified-user-list"></tbody>
             </table>
         </div>
     </div>
+</div>
+
+
 
     <div id="perms-tab" class="tab-content">
         <div style="background: rgba(0,242,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--neon);">
@@ -73,13 +118,56 @@
     </div>
 
     <div id="ip-tab" class="tab-content">
-        <div class="table-container">
-            <table>
-                <thead><tr><th>Nick</th><th>IP Adresi</th><th>Son Görülme</th><th>Durum</th><th>İşlem</th></tr></thead>
-                <tbody id="ip-list-body"></tbody>
-            </table>
-        </div>
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #222; padding-bottom: 10px;">
+        <button class="tab-btn active" id="sub-btn-ip-logs" onclick="openIpSubTab('ip-logs-section', this)">🌐 GENEL GÜNLÜK</button>
+        <button class="tab-btn" id="sub-btn-ip-analysis" onclick="openIpSubTab('ip-analysis-section', this)">🕵️ ÇAKIŞMA ANALİZİ</button>
     </div>
+
+    <div id="ip-logs-section" class="sub-tab-content active">
+    <div style="margin-bottom: 15px; background: rgba(0,242,255,0.05); padding: 10px; border-radius: 5px; border: 1px solid #222; display:flex; gap:10px; align-items:center;">
+        <input type="text" id="ip-search-input" placeholder="👤 Nick veya 📍 IP adresi ile ara..." 
+               oninput="filterIpLogs()" 
+               style="flex:1; background: #000; color: var(--neon); border: 1px solid #444; padding: 10px; border-radius: 5px; font-size: 12px; outline: none;">
+        <button class="btn-action" style="background:#333; color:var(--neon); border:1px solid var(--neon); white-space:nowrap;" onclick="loadIPLogs()">🔄 Yenile</button>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead><tr><th>Nick</th><th>IP Adresi</th><th>Son Görülme</th><th>Durum</th><th>İşlem</th></tr></thead>
+            <tbody id="ip-list-body"></tbody>
+        </table>
+    </div>
+</div>
+
+    <div id="ip-analysis-section" class="sub-tab-content">
+        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-bottom: 10px; border: 1px solid #333;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 150px;">
+                    <label style="font-size: 10px; color: var(--neon); display: block; margin-bottom: 5px;">🔍 ANALİZ TÜRÜ</label>
+                    <select id="analysis-type" onchange="runIpAnalysis()" style="width: 100%; background: #000; color: #fff; border: 1px solid var(--neon); padding: 6px; border-radius: 4px; font-size: 12px;">
+                        <option value="ip-to-nick">IP'ye Göre (Çift Hesaplar)</option>
+                        <option value="nick-to-ip">Nick'e Göre (IP Geçmişi)</option>
+                    </select>
+                </div>
+                <div style="flex: 2; min-width: 200px;">
+                    <label style="font-size: 10px; color: var(--danger); display: block; margin-bottom: 5px;">🚫 HARİÇ TUTULACAK IP'LER (Otomatik Kaydedilir)</label>
+                    <input type="text" id="exclude-ips" placeholder="Örn: 192.168.1.1, 88.241..." 
+                           style="width: 100%; background: #000; color: #ccc; border: 1px solid #444; padding: 6px; border-radius: 4px; font-size: 11px;">
+                </div>
+            </div>
+        </div>
+
+        <div style="background: #1a1a1c; border: 1px solid #333; border-bottom: none; display: flex; font-weight: bold; font-size: 11px; color: var(--neon); padding: 10px; border-radius: 5px 5px 0 0;">
+            <div style="flex: 3;">BAŞLIK (IP / NICK)</div>
+            <div style="flex: 6; text-align: left; padding-left: 10px;">EŞLEŞEN KAYITLAR</div>
+            <div style="flex: 1; text-align: center;">ADET</div>
+        </div>
+
+        <div id="analysis-results-container" style="display: flex; flex-direction: column; border: 1px solid #333; border-top: none; background: rgba(0,0,0,0.2); max-height: 450px; overflow-y: auto;">
+            </div>
+    </div>
+</div>
+        
 
     <div id="ban-manage-tab" class="tab-content">
         <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #222; padding-bottom: 10px;">
@@ -115,6 +203,115 @@
             </div>
         </div>
     </div>
+
+
+<div id="settings-tab" class="tab-content">
+    
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px;">
+        <button class="tab-btn active" id="sub-btn-colors-main" onclick="openSettingSubTab('color-settings-area', this)">🎨 RENK AYARLARI</button>
+        <button class="tab-btn" id="sub-btn-emojis-main" onclick="openSettingSubTab('emoji-settings-area', this)">😊 EMOJİ AYARLARI</button>
+        <button class="tab-btn" id="sub-btn-roles-main" onclick="openSettingSubTab('roles-settings-area', this)">🏆 RÜTBE AYARLARI</button>
+    </div>
+
+    <div id="color-settings-area" class="setting-sub-content active" style="display: block;">
+        <div style="display: flex; gap: 5px; margin-bottom: 15px; background: rgba(0,242,255,0.1); padding: 5px; border-radius: 5px;">
+            <button class="tab-btn active" style="flex:1; font-size:11px;" onclick="openColorTypeTab('main-colors-box', this, 'main')">💎 ANA RENKLER</button>
+            <button class="tab-btn" style="flex:1; font-size:11px;" onclick="openColorTypeTab('adv-colors-box', this, 'advanced')">✨ GELİŞMİŞ RENKLER</button>
+        </div>
+
+        <div class="whitelist-add-box" style="border-style: solid; margin-bottom: 15px; border-color: var(--neon);">
+            <h4 id="color-form-title" style="margin:0 0 10px 0; color:var(--neon); font-size:12px;">YENİ RENK EKLE</h4>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="new-color-name" placeholder="Renk Adı" style="flex:2; background:#000; border:1px solid #444; color:#fff; padding:8px;">
+                <input type="text" id="new-color-code" placeholder="#00f2ff" style="flex:1; background:#000; border:1px solid #444; color:#fff; padding:8px;">
+                <button class="btn-action btn-save" onclick="addNewColor()">EKLE</button>
+            </div>
+        </div>
+
+        <div id="main-colors-box" class="color-type-content active">
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Görsel</th><th>Renk Adı</th><th>Kodu</th><th>İşlem</th></tr></thead>
+                    <tbody id="main-colors-list"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="adv-colors-box" class="color-type-content" style="display:none;">
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Görsel</th><th>Renk Adı</th><th>Kodu</th><th>İşlem</th></tr></thead>
+                    <tbody id="adv-colors-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="emoji-settings-area" class="setting-sub-content" style="display: none;">
+        <div style="display: flex; gap: 5px; margin-bottom: 15px; background: rgba(255, 204, 0, 0.1); padding: 5px; border-radius: 5px;">
+            <button class="tab-btn active" style="flex:1; font-size:11px;" onclick="openEmojiTypeTab('emoji-genel-box', this, 'genel')">😊 GENEL</button>
+            <button class="tab-btn" style="flex:1; font-size:11px;" onclick="openEmojiTypeTab('emoji-hareketli-box', this, 'hareketli')">🎬 HAREKETLİ</button>
+            <button class="tab-btn" style="flex:1; font-size:11px;" onclick="openEmojiTypeTab('emoji-ozel-box', this, 'ozel')">✨ ÖZEL</button>
+        </div>
+
+        <div class="whitelist-add-box" style="border-color: var(--warning); border-style: solid; margin-bottom: 15px;">
+            <h4 id="emoji-form-title" style="margin:0 0 10px 0; color:var(--warning); font-size:12px;">YENİ EMOJİ EKLE</h4>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <input type="text" id="new-emo-char" placeholder="Emoji veya GIF Linki" style="flex:2; min-width:150px; background:#000; border:1px solid #444; color:#fff; padding:8px;">
+                <input type="text" id="new-emo-shortcut" placeholder="Kısayol (:slm:)" style="flex:1; min-width:120px; background:#000; border:1px solid #444; color:#fff; padding:8px;">
+                <button class="btn-action btn-warning" onclick="addNewEmoji()">SİSTEME EKLE</button>
+            </div>
+        </div>
+
+        <div id="emoji-genel-box" class="emoji-type-content active">
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Görsel</th><th>Kısayol</th><th>İşlem</th></tr></thead>
+                    <tbody id="list-emo-genel"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="emoji-hareketli-box" class="emoji-type-content" style="display:none;">
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Görsel</th><th>Kısayol</th><th>İşlem</th></tr></thead>
+                    <tbody id="list-emo-hareketli"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="emoji-ozel-box" class="emoji-type-content" style="display:none;">
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Görsel</th><th>Kısayol</th><th>İşlem</th></tr></thead>
+                    <tbody id="list-emo-ozel"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="roles-settings-area" class="setting-sub-content" style="display: none;">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr><th>Sıra</th><th>Rütbe Adı</th><th>Renk Seç</th><th>Renk Kodu</th><th>İşlem</th></tr>
+                </thead>
+                <tbody id="role-list-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+
+<div style="display: flex; gap: 15px; margin-bottom: 20px;">
+    <div style="flex: 1; background: var(--card); border: 1px solid var(--neon); padding: 15px; border-radius: 10px; text-align: center;">
+        <span style="color: #aaa; font-size: 11px; display: block;">BUGÜNKÜ TEKİL ZİYARETÇİ</span>
+        <h2 id="today-visitor-count" style="color: var(--neon); margin: 5px 0;">0</h2>
+    </div>
+    <div style="flex: 1; background: var(--card); border: 1px solid var(--success); padding: 15px; border-radius: 10px; text-align: center;">
+        <span style="color: #aaa; font-size: 11px; display: block;">TOPLAM TEKİL ZİYARETÇİ</span>
+        <h2 id="total-visitor-count" style="color: var(--success); margin: 5px 0;">0</h2>
+    </div>
+</div>
 
 <script>
     const firebaseConfig = { apiKey: "AIzaSyBeMsSLTbpmjzd7HrVKjhFIVAQ_goJsLUg", authDomain: "flat-chat-fa830.firebaseapp.com", databaseURL: "https://flat-chat-fa830-default-rtdb.europe-west1.firebasedatabase.app", projectId: "flat-chat-fa830" };
@@ -162,36 +359,123 @@
         init();
     }
 
+    // Hangi sekmelerin verisi zaten çekilmiş - aynı veriyi iki kez indirmemek için
+    const tabLoaded = { perms: false, ip: false, ban: false, settings: false };
+
+    let latestRoleSettings = null; // renderPerms/renderRoles için son bilinen rütbe verisi
+
     function init() {
+        // Sayfa ilk açıldığında SADECE varsayılan aktif sekme olan "Kullanıcı Yönetimi" için gereken veriler çekilir.
+        // Diğer sekmelerin (Yetki Tablosu, IP Günlüğü, Ban Yönetimi, Ayarlar) verisi, o sekmeye ilk tıklandığında çekilecek.
         db.ref('role_settings').on('value', rSnap => {
             const roles = rSnap.val() || {};
             roleList = Object.keys(roles).sort((a,b) => (roles[a].order || 99) - (roles[b].order || 99));
+            latestRoleSettings = roles;
             renderRoles(roles, roleList);
-            db.ref('permissions').on('value', pSnap => renderPerms(roleList, pSnap.val() || {}, roles));
             loadUsers();
-            loadIPLogs();
-            loadBanManagement();
+            // Yetki tablosu sekmesi zaten açılmışsa (ör. tekrar role_settings değişince) güncel tut
+            if (tabLoaded.perms) renderPerms(roleList, lastPermsData || {}, roles);
         });
     }
 
-    function loadUsers() {
-        db.ref('users').on('value', s => {
-            const list = document.getElementById('user-list'); list.innerHTML = "";
-            s.forEach(u => {
-                const n = u.key; const d = u.val();
-                let ops = roleList.map(k => `<option value="${k}" ${d.role===k?'selected':''}>${k}</option>`).join('');
-                list.innerHTML += `<tr>
-                    <td style="color:${d.color || '#fff'}"><b>${n}</b></td>
-                    <td><input type="text" value="${n}" id="un-${n}"></td>
-                    <td><input type="text" value="${myPerms.canSeePass?(d.password||''):'****'}" id="up-${n}"></td>
-                    <td><select id="uv-${n}"><option value="true" ${d.isVerified?'selected':''}>ONAYLI (F)</option><option value="false" ${!d.isVerified?'selected':''}>ONAYSIZ</option></select></td>
-                    <td><select id="ur-${n}">${ops}</select></td>
-                    <td><button class="btn-action btn-save" onclick="saveU('${n}')">KAYDET</button>
-                        <button class="btn-action btn-delete" onclick="deleteUser('${n}')">SİL</button></td>
-                </tr>`;
-            });
+    let lastPermsData = null;
+    function loadPermsTab() {
+        if (tabLoaded.perms) return;
+        tabLoaded.perms = true;
+        db.ref('permissions').on('value', pSnap => {
+            lastPermsData = pSnap.val() || {};
+            renderPerms(roleList, lastPermsData, latestRoleSettings || {});
         });
     }
+
+    function loadIpTabLazy() {
+        // Artık kalıcı bir dinleyici değil, tek seferlik ucuz bir sorgu olduğu için
+        // sekmeye her tıklandığında güncel veriyi taze çekiyoruz.
+        loadIPLogs();
+    }
+
+    function loadBanTabLazy() {
+        if (tabLoaded.ban) return;
+        tabLoaded.ban = true;
+        loadBanManagement();
+    }
+
+    function loadSettingsTabLazy() {
+        if (tabLoaded.settings) return;
+        tabLoaded.settings = true;
+        initSettingsSystem();
+    }
+
+    function loadUsers() {
+    db.ref('users').on('value', s => {
+        const unverifiedBody = document.getElementById('unverified-user-list');
+        const verifiedBody = document.getElementById('verified-user-list');
+
+        const verifiedRows = [];
+        const unverifiedRows = [];
+
+        s.forEach(u => {
+            const n = u.key;
+            const d = u.val();
+            const isF = d.isVerified === true;
+
+            let ops = roleList.map(k => `<option value="${k}" ${d.role===k?'selected':''}>${k}</option>`).join('');
+            
+            const rowHtml = `<tr>
+                <td style="color:${d.color || '#fff'}"><b>${n}</b></td>
+                <td><input type="text" value="${n}" id="un-${n}"></td>
+                <td><input type="text" value="${myPerms.canSeePass?(d.password||''):'****'}" id="up-${n}"></td>
+                <td>
+                    <select id="uv-${n}">
+                        <option value="true" ${isF ? 'selected' : ''}>ONAYLI (F)</option>
+                        <option value="false" ${!isF ? 'selected' : ''}>ONAYSIZ</option>
+                    </select>
+                </td>
+                <td><select id="ur-${n}">${ops}</select></td>
+                <td>
+                    <button class="btn-action btn-save" onclick="saveU('${n}')">KAYDET</button>
+                    <button class="btn-action btn-delete" onclick="deleteUser('${n}')">SİL</button>
+                </td>
+            </tr>`;
+
+            // Onay durumuna göre ilgili diziye ekle
+            if (isF) verifiedRows.push(rowHtml);
+            else unverifiedRows.push(rowHtml);
+        });
+
+        // Diziler tamamlandıktan sonra TEK SEFERDE DOM'a bas (döngü içinde innerHTML +=
+        // yapmak, satır sayısı arttıkça tüm HTML'i tekrar tekrar ayrıştırdığı için yavaşlar)
+        unverifiedBody.innerHTML = unverifiedRows.join('');
+        verifiedBody.innerHTML = verifiedRows.join('');
+
+        filterUserList(); // Arama filtresini tazele
+    });
+}
+
+// Kullanıcı Alt Sekme Değiştirme Fonksiyonu
+function openUserSubTab(id, btn) {
+    document.querySelectorAll('.user-sub-content').forEach(c => c.style.display = 'none');
+    document.getElementById('sub-btn-unverified').classList.remove('active');
+    document.getElementById('sub-btn-verified').classList.remove('active');
+    
+    document.getElementById(id).style.display = 'block';
+    btn.classList.add('active');
+}
+
+// Arama Fonksiyonunu Güncelle (Her iki tabloyu da tarasın)
+function filterUserList() {
+    const searchTerm = document.getElementById('user-search-input').value.toLowerCase();
+    const allRows = document.querySelectorAll('.user-sub-content tr');
+
+    allRows.forEach(row => {
+        const nickText = row.cells[0] ? row.cells[0].textContent.toLowerCase() : "";
+        if (nickText.includes(searchTerm)) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
+}
 
     async function saveU(oldN) {
         const newN = document.getElementById('un-'+oldN).value.trim();
@@ -210,46 +494,104 @@
     async function deleteUser(n) { if(confirm(n + " silinsin mi?")) await db.ref('users/'+n).remove(); }
 
     function loadIPLogs() {
-        db.ref('user_registry').on('value', s => {
-            const list = document.getElementById('ip-list-body'); list.innerHTML = "";
+        const list = document.getElementById('ip-list-body');
+        list.innerHTML = "<tr><td colspan='5' style='color:#888;'>⏳ Yükleniyor...</td></tr>";
+
+        // NOT: Eskiden .on('value', ...) kullanılıyordu; bu, user_registry içindeki HERHANGİ bir
+        // alan (ör. bir kullanıcının last_seen'i) her değiştiğinde tüm listeyi yeniden indirip
+        // yeniden çiziyordu. Sohbet aktifken bu çok sık tetiklenip ciddi yavaşlığa yol açıyordu.
+        // Artık tek seferlik okuma (.once) yapılıyor; güncel veri için "Yenile" butonu kullanılabilir.
+        db.ref('user_registry').once('value').then(s => {
+            let usersArray = [];
+
+            // 1. Önce verileri bir diziye topla ve durumlarını belirle
             s.forEach(u => {
                 const d = u.val();
                 const isOnline = (d.last_seen && (Date.now() - d.last_seen < 600000));
-                list.innerHTML += `<tr>
-                    <td style="color:var(--neon); font-weight:bold;">${u.key}</td>
-                    <td>${d.last_ip || '---'}</td>
-                    <td>${new Date(d.last_seen).toLocaleString()}</td>
-                    <td>${isOnline ? '<b style="color:var(--success)">AKTİF</b>' : 'Çevrimdışı'}</td>
-                    <td><button class="btn-action btn-delete" onclick="banUser('${d.last_ip}', '${u.key}')">BAN</button>
-                        <button class="btn-action" style="background:#444;" onclick="deleteIPLog('${u.key}')">SİL</button></td>
-                </tr>`;
+                usersArray.push({
+                    nick: u.key,
+                    last_ip: d.last_ip || '---',
+                    last_seen: d.last_seen,
+                    isOnline: isOnline
+                });
             });
+
+            // 2. Sıralama yap: Önce AKTİF olanlar (true > false), sonra Son Görülme zamanına göre
+            usersArray.sort((a, b) => {
+                if (a.isOnline === b.isOnline) {
+                    return b.last_seen - a.last_seen; // İkisi de aynı durumdaysa en son geleni üste al
+                }
+                return a.isOnline ? -1 : 1; // Aktif olanı bir adım öne çıkar
+            });
+
+            // 3. Tüm satırları bir dizide biriktirip TEK SEFERDE ekrana bas (eskiden her satırda
+            // innerHTML += yapılıyordu, bu da kayıt sayısı arttıkça O(n²) yavaşlığa yol açıyordu)
+            const rows = usersArray.map(u => `<tr>
+                <td style="color:var(--neon); font-weight:bold;">${u.nick}</td>
+                <td>${u.last_ip}</td>
+                <td>${u.last_seen ? new Date(u.last_seen).toLocaleString() : '---'}</td>
+                <td>${u.isOnline ? '<b style="color:var(--success)">AKTİF</b>' : 'Çevrimdışı'}</td>
+                <td>
+                    <button class="btn-action btn-delete" onclick="banUser('${u.last_ip}', '${u.nick}')">BAN</button>
+                    <button class="btn-action" style="background:#444;" onclick="deleteIPLog('${u.nick}')">SİL</button>
+                </td>
+            </tr>`);
+
+            list.innerHTML = rows.length ? rows.join('') : "<tr><td colspan='5' style='color:#888;'>Kayıt bulunamadı.</td></tr>";
+        }).catch(err => {
+            list.innerHTML = `<tr><td colspan='5' style='color:var(--danger);'>Hata: ${err.message}</td></tr>`;
         });
     }
 
     function deleteIPLog(n) { if(confirm("Log silinsin mi?")) db.ref('user_registry/'+n).remove(); }
 
     async function banUser(ip, nick) {
-        if(!ip || ip === "---") return alert("IP yok!");
-        const safeIp = ip.replace(/\./g, '_');
-        const white = await db.ref('whitelist/' + safeIp).once('value');
-        if(white.exists()) return alert("GÜVENLİ IP BANLANAMAZ!");
-        if(confirm(nick + " yasaklansın mı?")) {
-            await db.ref('banned_ips/' + safeIp).set({ nick: nick, date: Date.now() });
+    if (!ip || ip === "---") return alert("IP bulunamadı!");
+    
+    // IP'yi Firebase formatına çevir (Noktaları Alt Tire yap)
+    const safeIp = ip.replace(/\./g, '_');
+    
+    try {
+        // GÜVENLİ LİSTE KONTROLÜ (Veritabanından anlık çek)
+        const whiteSnap = await db.ref('whitelist/' + safeIp).once('value');
+        
+        if (whiteSnap.exists()) {
+            alert(`🛑 İŞLEM ENGELLENDİ!\n\n"${nick}" kullanıcısının IP adresi (${ip}) GÜVENLİ LİSTEDE kayıtlıdır. Bu kişiyi yasaklayamazsınız.`);
+            return; // Fonksiyondan çık, banlama yapma.
+        }
+
+        // Eğer güvenli listede değilse onay al ve banla
+        if (confirm(`${nick} (${ip}) yasaklansın mı?`)) {
+            await db.ref('banned_ips/' + safeIp).set({ 
+                nick: nick, 
+                date: Date.now(),
+                reason: "Admin Paneli Tarafından"
+            });
+            
+            // Kullanıcının izlerini temizle
             await db.ref('user_registry/' + nick).remove();
             await db.ref('presence/' + nick).remove();
-            alert("Yasaklandı!");
+            
+            alert("Kullanıcı başarıyla yasaklandı.");
         }
+    } catch (error) {
+        console.error("Ban hatası:", error);
+        alert("İşlem sırasında bir hata oluştu.");
     }
+}
 
     function loadBanManagement() {
         db.ref('banned_ips').on('value', s => {
-            const b = document.getElementById('ban-list-body'); b.innerHTML = "";
-            s.forEach(i => { b.innerHTML += `<tr><td>${i.val().nick}</td><td>${i.key.replace(/_/g,'.')}</td><td>${new Date(i.val().date).toLocaleDateString()}</td><td><button class="btn-action btn-warning" onclick="removeBan('${i.key}')">KALDIR</button></td></tr>`; });
+            const b = document.getElementById('ban-list-body');
+            const rows = [];
+            s.forEach(i => rows.push(`<tr><td>${i.val().nick}</td><td>${i.key.replace(/_/g,'.')}</td><td>${new Date(i.val().date).toLocaleDateString()}</td><td><button class="btn-action btn-warning" onclick="removeBan('${i.key}')">KALDIR</button></td></tr>`));
+            b.innerHTML = rows.join('');
         });
         db.ref('whitelist').on('value', s => {
-            const w = document.getElementById('white-list-body'); w.innerHTML = "";
-            s.forEach(i => { w.innerHTML += `<tr><td>${i.val().desc}</td><td>${i.val().ip}</td><td><button class="btn-action btn-delete" onclick="removeWhite('${i.key}')">SİL</button></td></tr>`; });
+            const w = document.getElementById('white-list-body');
+            const rows = [];
+            s.forEach(i => rows.push(`<tr><td>${i.val().desc}</td><td>${i.val().ip}</td><td><button class="btn-action btn-delete" onclick="removeWhite('${i.key}')">SİL</button></td></tr>`));
+            w.innerHTML = rows.join('');
         });
     }
 
@@ -276,10 +618,413 @@
     }
     
 
-    function openTab(id, btn) { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById(id).classList.add('active'); btn.classList.add('active'); }
+    function openTab(id, btn) {
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        btn.classList.add('active');
+
+        // Sekmeye ilk kez tıklandığında ilgili veriyi çek (tembel yükleme)
+        if (id === 'perms-tab') loadPermsTab();
+        else if (id === 'ip-tab') loadIpTabLazy();
+        else if (id === 'ban-manage-tab') loadBanTabLazy();
+        else if (id === 'settings-tab') loadSettingsTabLazy();
+    }
     function openSubTab(id, btn) { document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active')); document.getElementById('sub-btn-ban').classList.remove('active'); document.getElementById('sub-btn-white').classList.remove('active'); document.getElementById(id).classList.add('active'); btn.classList.add('active'); }
 
     checkMyPerms();
+
+let currentSelectedColorType = 'main'; // 'main' veya 'advanced'
+
+// 1. Katman: Renk Ayarları / Emoji Ayarları Değişimi
+function openSettingSubTab(id, btn) {
+    // 1. Tüm alt içerikleri (Renk, Emoji, Rütbe kutuları) gizle
+    const subContents = document.querySelectorAll('.setting-sub-content');
+    subContents.forEach(content => {
+        content.style.display = 'none';
+        content.classList.remove('active');
+    });
+
+    // 2. Sadece bu menüdeki butonların aktifliğini kaldır
+    const siblingButtons = btn.parentElement.querySelectorAll('.tab-btn');
+    siblingButtons.forEach(b => b.classList.remove('active'));
+
+    // 3. Seçilen alanı göster ve butonu aktif yap
+    const target = document.getElementById(id);
+    if (target) {
+        target.style.display = 'block';
+        target.classList.add('active');
+    }
+    btn.classList.add('active');
+}
+
+// 2. Katman: Ana Renk / Gelişmiş Renk Değişimi
+function openColorTypeTab(id, btn, type) {
+    currentSelectedColorType = type;
+    
+    // Sadece renk kutularını gizle/göster
+    document.querySelectorAll('.color-type-content').forEach(c => c.classList.remove('active'));
+    btn.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+    
+    // Form başlığını güncelle
+    document.getElementById('color-form-title').innerText = 
+        (type === 'main' ? 'ANA RENKLER - YENİ EKLE' : 'GELİŞMİŞ RENKLER - YENİ EKLE');
+}
+
+// RENK EKLEME FONKSİYONU
+function addNewColor() {
+    const name = document.getElementById('new-color-name').value.trim();
+    const code = document.getElementById('new-color-code').value.trim();
+
+    if (!name || !code) return alert("Lütfen tüm alanları doldurun!");
+
+    const colorId = Date.now();
+    db.ref(`settings/colors/${currentSelectedColorType}/${colorId}`).set({
+        name: name,
+        code: code
+    }).then(() => {
+        document.getElementById('new-color-name').value = "";
+        document.getElementById('new-color-code').value = "";
+    });
+}
+
+// VERİLERİ LİSTELEME
+function initSettingsSystem() {
+    // Renkleri Dinle
+    db.ref('settings/colors/main').on('value', snap => renderColorRows('main-colors-list', snap.val(), 'main'));
+    db.ref('settings/colors/advanced').on('value', snap => renderColorRows('adv-colors-list', snap.val(), 'advanced'));
+    
+    // Emojileri Dinle
+    db.ref('settings/chat_emojis').on('value', snap => {
+        if(snap.exists()) document.getElementById('emoji-list-input').value = snap.val();
+    });
+}
+
+function renderColorRows(targetId, data, category) {
+    const list = document.getElementById(targetId);
+    list.innerHTML = "";
+    if (!data) return;
+    Object.keys(data).forEach(id => {
+        const item = data[id];
+        list.innerHTML += `<tr>
+            <td><div style="width:18px; height:18px; background:${item.code}; border-radius:3px; margin:auto; border:1px solid #444;"></div></td>
+            <td><b>${item.name}</b></td>
+            <td><code>${item.code}</code></td>
+            <td><button class="btn-action btn-delete" onclick="deleteCol('${category}', '${id}')">SİL</button></td>
+        </tr>`;
+    });
+}
+
+function deleteCol(cat, id) {
+    if(confirm("Silinsin mi?")) db.ref(`settings/colors/${cat}/${id}`).remove();
+}
+
+// initSettingsSystem() artık sayfa açılışında değil, "Sistem Ayarları" sekmesine ilk tıklandığında
+// (openTab -> loadSettingsTabLazy) çalışıyor. Böylece renkler/emojiler o sekmeye girilmeden indirilmiyor.
+
+
+let currentEmojiCategory = 'genel'; // Seçili kategori takibi
+
+// Emoji Alt Sekme Değişimi (Genel/Hareketli/Özel)
+function openEmojiTypeTab(id, btn, type) {
+    currentEmojiCategory = type;
+    
+    // İçerikleri gizle/göster
+    document.querySelectorAll('.emoji-type-content').forEach(c => c.classList.remove('active'));
+    btn.parentElement.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+    
+    // Form başlığını güncelle
+    const titles = { 'genel': 'GENEL EMOJİ', 'hareketli': 'HAREKETLİ (GIF)', 'ozel': 'ÖZEL EMOJİ' };
+    document.getElementById('emoji-form-title').innerText = titles[type] + " - YENİ EKLE";
+}
+
+// Yeni Emoji Ekleme
+function addNewEmoji() {
+    const char = document.getElementById('new-emo-char').value.trim();
+    const shortcut = document.getElementById('new-emo-shortcut').value.trim();
+
+    if (!char) return alert("Lütfen bir emoji veya link girin!");
+
+    const emoId = Date.now();
+    db.ref(`settings/emojis/${currentEmojiCategory}/${emoId}`).set({
+        char: char,
+        shortcut: shortcut
+    }).then(() => {
+        document.getElementById('new-emo-char').value = "";
+        document.getElementById('new-emo-shortcut').value = "";
+    });
+}
+
+// Emojileri Firebase'den Çek ve Listele
+function loadEmojiLists() {
+    const categories = ['genel', 'hareketli', 'ozel'];
+    categories.forEach(cat => {
+        db.ref(`settings/emojis/${cat}`).on('value', snap => {
+            renderEmojiRows(`list-emo-${cat}`, snap.val(), cat);
+        });
+    });
+}
+
+function renderEmojiRows(targetId, data, category) {
+    const list = document.getElementById(targetId);
+    list.innerHTML = "";
+    if (!data) return;
+
+    Object.keys(data).forEach(id => {
+        const item = data[id];
+        const display = item.char.startsWith('http') 
+            ? `<img src="${item.char}" style="width:24px; height:24px; object-fit:contain;">` 
+            : `<span style="font-size:20px;">${item.char}</span>`;
+
+        list.innerHTML += `
+            <tr>
+                <td>${display}</td>
+                <td><code>${item.shortcut || '---'}</code></td>
+                <td><button class="btn-action btn-delete" onclick="deleteEmoji('${category}', '${id}')">SİL</button></td>
+            </tr>`;
+    });
+}
+
+function deleteEmoji(cat, id) {
+    if (confirm("Bu emojiyi silmek istediğinize emin misiniz?")) {
+        db.ref(`settings/emojis/${cat}/${id}`).remove();
+    }
+}
+
+
+
+// initSettingsSystem fonksiyonunda loadEmojiLists(); çağrılmalıdır.
+loadEmojiLists();
+
+// Alt sekme geçiş fonksiyonu (IP Günlüğü için)
+function openIpSubTab(id, btn) {
+    document.querySelectorAll('#ip-tab .sub-tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('#ip-tab .tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+    
+    if(id === 'ip-analysis-section') {
+        runIpAnalysis();
+    }
+}
+
+function runIpAnalysis() {
+    const type = document.getElementById('analysis-type').value;
+    const excludeInput = document.getElementById('exclude-ips').value;
+    const container = document.getElementById('analysis-results-container');
+    
+    // Hariç tutulacak IP'leri temizle ve diziye çevir
+    const excludedList = excludeInput.split(',').map(ip => ip.trim()).filter(ip => ip !== "");
+
+    container.innerHTML = "<div style='padding:20px; color:gray; font-size:11px;'>Analiz ediliyor...</div>";
+
+    db.ref('user_registry').once('value', s => {
+        const data = s.val() || {};
+        const groups = {}; 
+
+        Object.keys(data).forEach(nick => {
+            const ip = data[nick].last_ip;
+            if (!ip || ip === "---") return;
+
+            // HARİÇ TUTMA FİLTRESİ: Eğer IP listedeyse bu kaydı atla
+            if (excludedList.includes(ip)) return;
+
+            if (type === 'ip-to-nick') {
+                if (!groups[ip]) groups[ip] = [];
+                groups[ip].push(nick);
+            } else {
+                if (!groups[nick]) groups[nick] = [];
+                groups[nick].push(ip);
+            }
+        });
+
+        container.innerHTML = "";
+
+        Object.keys(groups).forEach(key => {
+            const items = groups[key];
+            
+            // Sadece 1'den fazla kayıt olan çakışmaları göster
+            if (items.length > 1) {
+                const row = document.createElement('div');
+                row.style.cssText = "display: flex; align-items: stretch; border-bottom: 1px solid #222; min-height: 40px;";
+                
+                // Sol Sütun (Başlık)
+                const colTitle = `
+                    <div style="flex: 3; padding: 10px; background: rgba(0,242,255,0.02); border-right: 1px solid #222; font-size: 11px; color: #fff; display: flex; align-items: center;">
+                        <b>${key}</b>
+                    </div>`;
+                
+                // Orta Sütun (Nickler veya IP'ler)
+                const listItems = items.map(item => `
+                    <div style="padding: 3px 0; color: #aaa; font-size: 11px;">• ${item}</div>
+                `).join('');
+                
+                const colList = `
+                    <div style="flex: 5; padding: 10px; display: flex; flex-direction: column; justify-content: center; padding-left: 15px;">
+                        ${listItems}
+                    </div>`;
+
+                // Sağ Sütun (Adet)
+                const colCount = `
+                    <div style="flex: 2; display: flex; align-items: center; justify-content: center; background: rgba(255, 75, 43, 0.05);">
+                        <span style="color: var(--danger); font-weight: bold; font-size: 12px;">${items.length}</span>
+                    </div>`;
+
+                row.innerHTML = colTitle + colList + colCount;
+                container.appendChild(row);
+            }
+        });
+
+        if (container.innerHTML === "") {
+            container.innerHTML = "<div style='text-align:center; color:gray; padding:40px; font-size:12px;'>Kriterlere uygun çakışma bulunamadı.</div>";
+        }
+    });
+}
+
+// Sayfa yüklendiğinde hafızadaki IP'leri getir
+document.addEventListener('DOMContentLoaded', () => {
+    const savedExcludes = localStorage.getItem('excluded_ips_list');
+    const input = document.getElementById('exclude-ips');
+    if(savedExcludes && input) {
+        input.value = savedExcludes;
+    }
+    
+    // Input her değiştiğinde hafızaya kaydet ve analizi çalıştır
+    if(input) {
+        input.addEventListener('input', () => {
+            localStorage.setItem('excluded_ips_list', input.value);
+            runIpAnalysis();
+        });
+    }
+});
+
+function runIpAnalysis() {
+    const type = document.getElementById('analysis-type').value;
+    const excludeInput = document.getElementById('exclude-ips').value;
+    const container = document.getElementById('analysis-results-container');
+    
+    const excludedList = excludeInput.split(',').map(ip => ip.trim()).filter(ip => ip !== "");
+
+    container.innerHTML = "<div style='padding:20px; color:gray; font-size:11px;'>Analiz ediliyor...</div>";
+
+    db.ref('user_registry').once('value', s => {
+        const data = s.val() || {};
+        const groups = {}; 
+
+        Object.keys(data).forEach(nick => {
+            const ip = data[nick].last_ip;
+            if (!ip || ip === "---") return;
+            if (excludedList.includes(ip)) return;
+
+            if (type === 'ip-to-nick') {
+                if (!groups[ip]) groups[ip] = [];
+                groups[ip].push(nick);
+            } else {
+                if (!groups[nick]) groups[nick] = [];
+                groups[nick].push(ip);
+            }
+        });
+
+        container.innerHTML = "";
+
+        Object.keys(groups).forEach(key => {
+            let items = groups[key];
+            
+            if (items.length > 1) {
+                // --- YENİ SIRALAMA MANTIĞI BURADA BAŞLIYOR ---
+                items.sort((a, b) => {
+                    const isAGuest = a.toLowerCase().startsWith('guest');
+                    const isBGuest = b.toLowerCase().startsWith('guest');
+
+                    if (isAGuest && !isBGuest) return 1;  // a guest ise sona at
+                    if (!isAGuest && isBGuest) return -1; // b guest ise a'yı öne al
+                    return a.localeCompare(b);            // İkisi de aynı türse alfabetik sırala
+                });
+                // --- SIRALAMA MANTIĞI BİTTİ ---
+
+                const row = document.createElement('div');
+                row.style.cssText = "display: flex; align-items: stretch; border-bottom: 1px solid #222; min-height: 45px;";
+                
+                const colTitle = `
+                    <div style="flex: 3; padding: 10px; background: rgba(0,242,255,0.02); border-right: 1px solid #222; font-size: 11px; color: #fff; display: flex; align-items: center; word-break: break-all;">
+                        <b>${key}</b>
+                    </div>`;
+                
+                const listHtml = items.map((item, index) => {
+                    // Guest olanlara farklı bir renk vererek daha iyi ayırt edebiliriz
+                    const isGuest = item.toLowerCase().startsWith('guest');
+                    const color = isGuest ? '#666' : '#ccc';
+                    return `<span style="color: ${color}; font-size: 11px;">${item}${index === items.length - 1 ? '' : ', '}</span>`;
+                }).join('');
+                
+                const colList = `
+                    <div style="flex: 6; padding: 10px; display: flex; flex-wrap: wrap; gap: 4px; align-content: center; padding-left: 15px;">
+                        ${listHtml}
+                    </div>`;
+
+                const colCount = `
+                    <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(255, 75, 43, 0.05); border-left: 1px solid #222;">
+                        <span style="color: var(--danger); font-weight: bold; font-size: 12px;">${items.length}</span>
+                    </div>`;
+
+                row.innerHTML = colTitle + colList + colCount;
+                container.appendChild(row);
+            }
+        });
+
+        if (container.innerHTML === "") {
+            container.innerHTML = "<div style='text-align:center; color:gray; padding:40px; font-size:12px;'>Kriterlere uygun çakışma bulunamadı.</div>";
+        }
+    });
+}
+
+function filterIpLogs() {
+    const searchTerm = document.getElementById('ip-search-input').value.toLowerCase();
+    const tableRows = document.querySelectorAll('#ip-list-body tr');
+
+    tableRows.forEach(row => {
+        // Nick (1. sütun) ve IP (2. sütun) verilerini al
+        const nickText = row.cells[0].textContent.toLowerCase();
+        const ipText = row.cells[1].textContent.toLowerCase();
+
+        // Eğer arama terimi nick veya IP içinde geçiyorsa satırı göster, geçmiyorsa gizle
+        if (nickText.includes(searchTerm) || ipText.includes(searchTerm)) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
+}
+
+// NOT: filterUserList fonksiyonu burada tekrar tanımlanmıştı ve var olmayan
+// "#user-list" ID'sini arıyordu (gerçek ID'ler: unverified-user-list / verified-user-list).
+// Bu yüzden arama kutusu çalışmıyordu. Doğru tanım yukarıda (satır ~466) zaten mevcut,
+// bu bozuk kopya kaldırıldı.
+
+function loadVisitorStats() {
+    const today = new Date().toISOString().split('T')[0]; // Örn: 2026-04-16
+
+    // 1. Toplam Ziyaretçi Sayısını Çek (Tekil IP Sayısı)
+    db.ref('stats/total_ips').on('value', snap => {
+        const count = snap.numChildren();
+        document.getElementById('total-visitor-count').innerText = count;
+    });
+
+    // 2. Bugünkü Ziyaretçi Sayısını Çek
+    db.ref(`stats/daily_visits/${today}`).on('value', snap => {
+        const count = snap.numChildren();
+        document.getElementById('today-visitor-count').innerText = count;
+    });
+}
+
+// Bunu init() fonksiyonunuzun içine veya checkMyPerms() sonuna ekleyin
+loadVisitorStats();
 </script>
 </body>
 </html>
