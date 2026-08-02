@@ -108,7 +108,17 @@
     <div class="user-count-box">Dinleyici: <span id="total-user-count">0</span></div>
 </div>
 
-
+<button id="btn-ban-list" class="widget" onclick="toggleBanList()" 
+    style="display:none; position:relative; background:rgba(255, 75, 43, 0.8); border:1px solid #ff4b2b; color:#fff; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; z-index: 9999; overflow:hidden;">
+    🚫 BANLILAR
+</button>
+<div id="ban-list-popup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:280px; background:rgba(15,15,15,0.98); border:2px solid #ff4b2b; border-radius:12px; z-index:100002; padding:20px; box-shadow:0 0 30px rgba(255,75,43,0.5); backdrop-filter: blur(10px);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,75,43,0.3); padding-bottom:10px;">
+        <h3 style="margin:0; color:#ff4b2b; font-size:14px;">YASAKLI LİSTESİ</h3>
+        <span onclick="toggleBanList()" style="cursor:pointer; color:#888; font-size:20px; font-weight:bold;">×</span>
+    </div>
+    <div id="ban-items-content" style="max-height:300px; overflow-y:auto; padding-right:5px;"></div>
+</div>
 
 <script>
     // CLOUDFLARE WORKERS API URL'NİZ (Lütfen buraya kendi workers adresinizi yazın)
@@ -134,7 +144,7 @@
     let currentColor = localStorage.getItem("filiz_chat_color") || "#00f2ff";
     let isVerified = false, fontSize = 14, myRole = "Misafir", isBold = false, isItalic = false;
     let myPerms = {}; let allRoles = {}; let draggies = [];
-    const widgetIds = ['chat-widget', 'input-widget', 'online-widget', 'login-widget', 'tools-widget', 'count-widget'];
+    const widgetIds = ['chat-widget', 'input-widget', 'online-widget', 'login-widget', 'tools-widget', 'count-widget', 'btn-ban-list'];
 
     window.onload = () => { 
         initEmojis(); 
@@ -151,33 +161,6 @@
         startAuth(); 
         startCounter();
     };
-
-    // --- Güvenlik: mesaj metnindeki HTML özel karakterlerini zararsız hale getirir ---
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text == null ? '' : String(text);
-        return div.innerHTML;
-    }
-
-    // --- URL/link tespiti: metin içindeki http(s):// veya www. ile başlayan adresleri tıklanabilir linke çevirir ---
-    // NOT: text parametresi ÖNCE escapeHtml'den geçmiş olmalı, yoksa zararlı kod linke çevrilebilir.
-    function linkify(escapedText) {
-        const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
-        return escapedText.replace(urlPattern, (match) => {
-            let href = match;
-            if (!/^https?:\/\//i.test(href)) href = 'https://' + href;
-            // Cümle sonu noktalama işaretlerini (. , ! ? gibi) linkin dışında bırak
-            const trailingPunctMatch = match.match(/[.,!?;:]+$/);
-            let trailing = '';
-            let linkText = match;
-            if (trailingPunctMatch) {
-                trailing = trailingPunctMatch[0];
-                linkText = match.slice(0, -trailing.length);
-                href = href.slice(0, href.length - trailing.length);
-            }
-            return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#00f2ff; text-decoration:underline; word-break:break-all;">${linkText}</a>${trailing}`;
-        });
-    }
 
     function loadMessages() {
         const win = document.getElementById('chat-window');
@@ -224,8 +207,7 @@
             const italicStyle = d.i ? "font-style: italic; display: inline-block; transform: skewX(-15deg); margin-left: 3px;" : "";
             
             mRow.style.cssText = `color:${d.c}; font-weight:${d.b ? 'bold' : 'normal'}; font-size:${fontSize}px; margin-bottom: 5px;`;
-            const safeMsg = linkify(escapeHtml(d.m));
-            mRow.innerHTML = `<b style="color:${nCol}; margin-right: 5px; font-style: normal;">${escapeHtml(d.u)} :</b><span style="${italicStyle}">${safeMsg}</span>`;
+            mRow.innerHTML = `<b style="color:${nCol}; margin-right: 5px; font-style: normal;">${d.u} :</b><span style="${italicStyle}">${d.m}</span>`;
             
             mRow.oncontextmenu = (e) => createContextMenu(e, { msgKey: s.key, name: d.u });
             win.prepend(mRow);
@@ -258,19 +240,10 @@
 
     function startCounter() {
         db.ref('presence').on('value', (snapshot) => {
-            // NOT: Eskiden snapshot.numChildren() kullanılıyordu, bu presence altındaki HER kaydı
-            // sayıyordu (name alanı olmayan "hayalet"/yarım kalmış kayıtlar dahil). Bu yüzden sayaç,
-            // görünen nick listesinden (loadUsers - sadece name'i dolu olanları sayar) farklı çıkıyordu.
-            // Artık aynı kurala göre sayıyoruz: sadece geçerli bir "name" alanı olan kayıtlar sayılır.
-            let validCount = 0;
-            snapshot.forEach(u => {
-                const ud = u.val();
-                if (ud && ud.name) validCount++;
-            });
-
+            const totalUsers = snapshot.numChildren();
             const countElement = document.getElementById('total-user-count');
             if (countElement) {
-                countElement.innerText = validCount;
+                countElement.innerText = totalUsers || 0;
             }
         });
     }
@@ -334,7 +307,7 @@
                 }
                 
                 loadMessages();
-                // checkBanViewPerms(); // BANLILAR widget'ı kaldırıldığı için artık çağrılmıyor
+                checkBanViewPerms();
             });
 
             presenceRef.set({
@@ -747,8 +720,63 @@ async function confirmLogin() {
         }
     }
 
-    // BANLILAR widget'ı ve popup'ı kaldırıldı; ilgili fonksiyonlar (checkBanViewPerms,
-    // toggleBanList, loadBanListToPopup, removeBanFromSohbet) da bununla birlikte temizlendi.
+    async function checkBanViewPerms() {
+        if (myPerms && (myPerms.canAccessAdmin || myPerms.canBan)) {
+            const btn = document.getElementById('btn-ban-list');
+            if(btn) btn.style.display = 'inline-block';
+        }
+    }
+
+    function toggleBanList() {
+        if (document.querySelector('.edit-mode-active')) return;
+        const popup = document.getElementById('ban-list-popup');
+        if (popup.style.display === 'none') {
+            popup.style.display = 'block';
+            loadBanListToPopup();
+        } else { popup.style.display = 'none'; }
+    }
+
+    async function loadBanListToPopup() {
+        const content = document.getElementById('ban-items-content');
+        content.innerHTML = "<small style='color:#666'>Turso'dan yükleniyor...</small>";
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/banned-ips`);
+            const data = await res.json();
+            content.innerHTML = "";
+
+            if (!data.rows || data.rows.length === 0) {
+                content.innerHTML = "<div style='padding:10px; text-align:center;'>Yasaklı kimse yok.</div>";
+                return;
+            }
+
+            data.rows.forEach(row => {
+                const ip = row[1]; 
+                const reason = row[2] || "Sebep yok";
+                const div = document.createElement('div');
+                div.style = "display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);";
+                div.innerHTML = `
+                    <span style="color:#eee; font-size:12px;" title="${reason}">${ip}</span>
+                    <button onclick="removeBanFromSohbet('${ip}')" style="background:transparent; border:1px solid #00fc00; color:#00fc00; font-size:9px; cursor:pointer; border-radius:3px; padding:2px 5px;">KALDIR</button>
+                `;
+                content.appendChild(div);
+            });
+        } catch(e) { content.innerHTML = "<small style='color:red;'>Hata oluştu.</small>"; }
+    }
+
+    async function removeBanFromSohbet(ip) {
+        if (confirm("Bu kişinin yasağı kaldırılsın mı?")) {
+            try {
+                await fetch(`${API_BASE_URL}/api/admin/unban-ip`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ip: ip })
+                });
+                db.ref('messages').push().set({ m: `✅ Bir kullanıcının yasağı kaldırıldı.`, type: "system" });
+                loadBanListToPopup();
+            } catch(e) { alert("Ban kaldırılamadı."); }
+        }
+    }
 </script>
 </body>
 </html>
