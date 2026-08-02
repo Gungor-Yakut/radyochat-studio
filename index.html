@@ -108,21 +108,10 @@
     <div class="user-count-box">Dinleyici: <span id="total-user-count">0</span></div>
 </div>
 
-<button id="btn-ban-list" class="widget" onclick="toggleBanList()" 
-    style="display:none; position:relative; background:rgba(255, 75, 43, 0.8); border:1px solid #ff4b2b; color:#fff; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; z-index: 9999; overflow:hidden;">
-    🚫 BANLILAR
-</button>
-<div id="ban-list-popup" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:280px; background:rgba(15,15,15,0.98); border:2px solid #ff4b2b; border-radius:12px; z-index:100002; padding:20px; box-shadow:0 0 30px rgba(255,75,43,0.5); backdrop-filter: blur(10px);">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,75,43,0.3); padding-bottom:10px;">
-        <h3 style="margin:0; color:#ff4b2b; font-size:14px;">YASAKLI LİSTESİ</h3>
-        <span onclick="toggleBanList()" style="cursor:pointer; color:#888; font-size:20px; font-weight:bold;">×</span>
-    </div>
-    <div id="ban-items-content" style="max-height:300px; overflow-y:auto; padding-right:5px;"></div>
-</div>
+
 
 <script>
-    // CLOUDFLARE WORKERS API URL'NİZ (Lütfen buraya kendi workers adresinizi yazın)
-    const API_BASE_URL = "https://chat-backend-api.yakuttgungor.workers.dev";
+    // Turso/Cloudflare Workers backend kaldırıldı - sistem tamamen Firebase üzerinden çalışıyor.
 
     const firebaseConfig = { apiKey: "AIzaSyBeMsSLTbpmjzd7HrVKjhFIVAQ_goJsLUg", authDomain: "flat-chat-fa830.firebaseapp.com", databaseURL: "https://flat-chat-fa830-default-rtdb.europe-west1.firebasedatabase.app", projectId: "flat-chat-fa830" };
     firebase.initializeApp(firebaseConfig);
@@ -144,7 +133,7 @@
     let currentColor = localStorage.getItem("filiz_chat_color") || "#00f2ff";
     let isVerified = false, fontSize = 14, myRole = "Misafir", isBold = false, isItalic = false;
     let myPerms = {}; let allRoles = {}; let draggies = [];
-    const widgetIds = ['chat-widget', 'input-widget', 'online-widget', 'login-widget', 'tools-widget', 'count-widget', 'btn-ban-list'];
+    const widgetIds = ['chat-widget', 'input-widget', 'online-widget', 'login-widget', 'tools-widget', 'count-widget'];
 
     window.onload = () => { 
         initEmojis(); 
@@ -161,6 +150,33 @@
         startAuth(); 
         startCounter();
     };
+
+    // --- Güvenlik: mesaj metnindeki HTML özel karakterlerini zararsız hale getirir ---
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text == null ? '' : String(text);
+        return div.innerHTML;
+    }
+
+    // --- URL/link tespiti: metin içindeki http(s):// veya www. ile başlayan adresleri tıklanabilir linke çevirir ---
+    // NOT: text parametresi ÖNCE escapeHtml'den geçmiş olmalı, yoksa zararlı kod linke çevrilebilir.
+    function linkify(escapedText) {
+        const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
+        return escapedText.replace(urlPattern, (match) => {
+            let href = match;
+            if (!/^https?:\/\//i.test(href)) href = 'https://' + href;
+            // Cümle sonu noktalama işaretlerini (. , ! ? gibi) linkin dışında bırak
+            const trailingPunctMatch = match.match(/[.,!?;:]+$/);
+            let trailing = '';
+            let linkText = match;
+            if (trailingPunctMatch) {
+                trailing = trailingPunctMatch[0];
+                linkText = match.slice(0, -trailing.length);
+                href = href.slice(0, href.length - trailing.length);
+            }
+            return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#00f2ff; text-decoration:underline; word-break:break-all;">${linkText}</a>${trailing}`;
+        });
+    }
 
     function loadMessages() {
         const win = document.getElementById('chat-window');
@@ -207,7 +223,8 @@
             const italicStyle = d.i ? "font-style: italic; display: inline-block; transform: skewX(-15deg); margin-left: 3px;" : "";
             
             mRow.style.cssText = `color:${d.c}; font-weight:${d.b ? 'bold' : 'normal'}; font-size:${fontSize}px; margin-bottom: 5px;`;
-            mRow.innerHTML = `<b style="color:${nCol}; margin-right: 5px; font-style: normal;">${d.u} :</b><span style="${italicStyle}">${d.m}</span>`;
+            const safeMsg = linkify(escapeHtml(d.m));
+            mRow.innerHTML = `<b style="color:${nCol}; margin-right: 5px; font-style: normal;">${escapeHtml(d.u)} :</b><span style="${italicStyle}">${safeMsg}</span>`;
             
             mRow.oncontextmenu = (e) => createContextMenu(e, { msgKey: s.key, name: d.u });
             win.prepend(mRow);
@@ -240,10 +257,19 @@
 
     function startCounter() {
         db.ref('presence').on('value', (snapshot) => {
-            const totalUsers = snapshot.numChildren();
+            // NOT: Eskiden snapshot.numChildren() kullanılıyordu, bu presence altındaki HER kaydı
+            // sayıyordu (name alanı olmayan "hayalet"/yarım kalmış kayıtlar dahil). Bu yüzden sayaç,
+            // görünen nick listesinden (loadUsers - sadece name'i dolu olanları sayar) farklı çıkıyordu.
+            // Artık aynı kurala göre sayıyoruz: sadece geçerli bir "name" alanı olan kayıtlar sayılır.
+            let validCount = 0;
+            snapshot.forEach(u => {
+                const ud = u.val();
+                if (ud && ud.name) validCount++;
+            });
+
             const countElement = document.getElementById('total-user-count');
             if (countElement) {
-                countElement.innerText = totalUsers || 0;
+                countElement.innerText = validCount;
             }
         });
     }
@@ -307,7 +333,7 @@
                 }
                 
                 loadMessages();
-                checkBanViewPerms();
+                // checkBanViewPerms(); // BANLILAR widget'ı kaldırıldığı için artık çağrılmıyor
             });
 
             presenceRef.set({
@@ -528,68 +554,45 @@
         location.reload(); 
     }
 
-    // --- TURSO ENTEGRASYONLU YENİ GİRİŞ / KAYIT FONKSİYONU ---
+    // --- SADECE FIREBASE İLE ÇALIŞAN GİRİŞ / KAYIT FONKSİYONU ---
 async function confirmLogin() { 
     const n = document.getElementById('nick-input').value.trim(); 
     const p = document.getElementById('pass-input').value.trim(); 
     if(!n || !p) return alert("Eksik bilgi!");
 
     try {
-        // API'ye giriş isteği gönder
-        const response = await fetch(`${API_BASE_URL}/api/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username: n, password: p })
-        });
+        const snap = await db.ref('users/' + n).once('value');
+        const userData = snap.val();
 
-        const result = await response.json();
+        // Kullanıcı Firebase'de kayıtlı değil -> yeni kayıt oluştur
+        if (!userData) {
+            if (confirm("Bu nick ile yeni bir kayıt oluşturulsun mu?")) {
+                await db.ref('users/' + n).set({ password: p, role: "Misafir", isVerified: false, color: currentColor, joinedAt: Date.now() });
 
-        // Şifre yanlışsa uyar
-        if (result.status === "WRONG_PASSWORD") {
+                if(myName && myName.startsWith("Guest")) {
+                    await db.ref('presence/' + myName).remove();
+                }
+                sessionStorage.setItem("filiz_chat_nick", n);
+                location.reload();
+            }
+            return;
+        }
+
+        // Kullanıcı kayıtlı -> şifre kontrolü
+        if (userData.password !== p) {
             alert("Şifre yanlış!");
             return;
         }
 
-        // Kullanıcı veritabanında yoksa kayıt ol onay kutusunu aç
-        if (result.status === "NOT_FOUND") {
-            if (confirm("Bu nick ile yeni bir kayıt oluşturulsun mu?")) {
-                const regResponse = await fetch(`${API_BASE_URL}/api/register`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username: n, password: p })
-                });
-                const regResult = await regResponse.json();
-                
-                // NOT: Turso API'nizin dönüş tipine göre regResult.success veya regResult.status === "SUCCESS" kontrolü yapın
-                if(regResult.success || regResult.status === "SUCCESS") {
-                    // Firebase ile gerçek zamanlı veri eşleşmesini bekleyelim
-                    await db.ref('users/' + n).set({ password: p, role: "Misafir", isVerified: false, color: "#00f2ff", joinedAt: Date.now() });
-                    
-                    if(myName && myName.startsWith("Guest")) {
-                        await db.ref('presence/' + myName).remove();
-                    }
-                    sessionStorage.setItem("filiz_chat_nick", n); 
-                    location.reload();
-                } else {
-                    alert("Kayıt sırasında bir hata oluştu: " + (regResult.message || "Bilinmeyen hata"));
-                }
-            }
-            return;
+        // Giriş başarılı
+        if(myName && myName.startsWith("Guest")) {
+            await db.ref('presence/' + myName).remove();
         }
-
-        // Giriş tamamen başarılıysa
-        if (result.status === "SUCCESS") {
-            await db.ref('users/' + n).update({ password: p }); // Firebase şifre güvencesi
-            if(myName && myName.startsWith("Guest")) {
-                await db.ref('presence/' + myName).remove();
-            }
-            
-            sessionStorage.setItem("filiz_chat_nick", n);
-            location.reload(); 
-        }
+        sessionStorage.setItem("filiz_chat_nick", n);
+        location.reload();
 
     } catch (err) {
-        alert("Giriş bağlantı hatası: " + err.message);
+        alert("Giriş sırasında bir hata oluştu: " + err.message);
     }
 }
 
@@ -642,25 +645,29 @@ async function confirmLogin() {
     function clearMsgs() { if(confirm("Sohbeti temizle?")) { db.ref('messages').remove().then(() => { db.ref('messages').push().set({ m: `⚠️ Sohbet ${myName} tarafından temizlenmiştir.`, type: "system" }); }); } }
     
     // --- TURSO UYUMLU IP BAN KONTROLÜ ---
+    // --- SADECE FIREBASE İLE ÇALIŞAN BAN KONTROLÜ ---
     async function checkBanStatus() {
         try {
             const res = await fetch('https://api.ipify.org?format=json');
             const data = await res.json();
             const myIp = data.ip;
+            const safeIp = myIp.replace(/\./g, '_');
 
-            // Turso API'ye logla ve ban kontrolü al
-            const banLogRes = await fetch(`${API_BASE_URL}/api/log-ip`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: myName, ip: myIp, user_agent: navigator.userAgent })
-            });
-            const banLogData = await banLogRes.json();
-
-            if (banLogData.banned) {
-                document.body.innerHTML = `<h1 style='color:red; text-align:center; margin-top:100px;'>ERİŞİM ENGELLENDİ<br><small style='font-size:16px;color:#aaa;'>Sebep: ${banLogData.reason}</small></h1>`;
+            // Firebase'deki banned_ips düğümünden doğrudan kontrol et
+            const banSnap = await db.ref('banned_ips/' + safeIp).once('value');
+            if (banSnap.exists()) {
+                const banData = banSnap.val() || {};
+                document.body.innerHTML = `<h1 style='color:red; text-align:center; margin-top:100px;'>ERİŞİM ENGELLENDİ<br><small style='font-size:16px;color:#aaa;'>Sebep: ${escapeHtml(banData.reason || 'Belirtilmemiş')}</small></h1>`;
+                return;
             }
+
+            // Banlı değilse: IP Günlüğü için kaydı güncelle
+            await db.ref('user_registry/' + myName).update({
+                last_ip: myIp,
+                last_seen: Date.now()
+            });
         } catch (e) {
-            console.error("Ban kontrolü yapılamadı (API kapalı olabilir):", e);
+            console.error("Ban kontrolü yapılamadı:", e);
         }
     }
     
@@ -679,21 +686,22 @@ async function confirmLogin() {
 
         if(!confirm(`${tNick} kullanıcısını kalıcı olarak banlamak istiyor musunuz?`)) return;
 
-        // Firebase logundan IP'yi çek ve Turso API'ye ban emri gönder
+        // Firebase'den hedefin son bilinen IP'sini çek
         const regSnap = await db.ref('user_registry/' + tNick).once('value');
         let targetIp = (regSnap.exists() && regSnap.val().last_ip) ? regSnap.val().last_ip : "";
 
         if(targetIp) {
             try {
-                await fetch(`${API_BASE_URL}/api/admin/ban-ip`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ip: targetIp, reason: "Sohbet içerisinden hızlı ban" })
+                const safeIp = targetIp.replace(/\./g, '_');
+                await db.ref('banned_ips/' + safeIp).set({
+                    nick: tNick,
+                    date: Date.now(),
+                    reason: "Sohbet içerisinden hızlı ban"
                 });
                 await db.ref('presence/' + tNick).remove();
                 alert(`${tNick} başarıyla uzaklaştırıldı.`);
             } catch(e) {
-                alert("Turso Ban işlemi başarısız: " + e.message);
+                alert("Ban işlemi başarısız: " + e.message);
             }
         } else {
             alert("Kullanıcının IP adresi bulunamadığı için sadece odadan düşürüldü.");
@@ -720,63 +728,8 @@ async function confirmLogin() {
         }
     }
 
-    async function checkBanViewPerms() {
-        if (myPerms && (myPerms.canAccessAdmin || myPerms.canBan)) {
-            const btn = document.getElementById('btn-ban-list');
-            if(btn) btn.style.display = 'inline-block';
-        }
-    }
-
-    function toggleBanList() {
-        if (document.querySelector('.edit-mode-active')) return;
-        const popup = document.getElementById('ban-list-popup');
-        if (popup.style.display === 'none') {
-            popup.style.display = 'block';
-            loadBanListToPopup();
-        } else { popup.style.display = 'none'; }
-    }
-
-    async function loadBanListToPopup() {
-        const content = document.getElementById('ban-items-content');
-        content.innerHTML = "<small style='color:#666'>Turso'dan yükleniyor...</small>";
-
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/admin/banned-ips`);
-            const data = await res.json();
-            content.innerHTML = "";
-
-            if (!data.rows || data.rows.length === 0) {
-                content.innerHTML = "<div style='padding:10px; text-align:center;'>Yasaklı kimse yok.</div>";
-                return;
-            }
-
-            data.rows.forEach(row => {
-                const ip = row[1]; 
-                const reason = row[2] || "Sebep yok";
-                const div = document.createElement('div');
-                div.style = "display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);";
-                div.innerHTML = `
-                    <span style="color:#eee; font-size:12px;" title="${reason}">${ip}</span>
-                    <button onclick="removeBanFromSohbet('${ip}')" style="background:transparent; border:1px solid #00fc00; color:#00fc00; font-size:9px; cursor:pointer; border-radius:3px; padding:2px 5px;">KALDIR</button>
-                `;
-                content.appendChild(div);
-            });
-        } catch(e) { content.innerHTML = "<small style='color:red;'>Hata oluştu.</small>"; }
-    }
-
-    async function removeBanFromSohbet(ip) {
-        if (confirm("Bu kişinin yasağı kaldırılsın mı?")) {
-            try {
-                await fetch(`${API_BASE_URL}/api/admin/unban-ip`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ip: ip })
-                });
-                db.ref('messages').push().set({ m: `✅ Bir kullanıcının yasağı kaldırıldı.`, type: "system" });
-                loadBanListToPopup();
-            } catch(e) { alert("Ban kaldırılamadı."); }
-        }
-    }
+    // BANLILAR widget'ı ve popup'ı kaldırıldı; ilgili fonksiyonlar (checkBanViewPerms,
+    // toggleBanList, loadBanListToPopup, removeBanFromSohbet) da bununla birlikte temizlendi.
 </script>
 </body>
 </html>
