@@ -149,6 +149,7 @@
         }
         startAuth(); 
         startCounter();
+        listenForKick();
     };
 
     // --- Güvenlik: mesaj metnindeki HTML özel karakterlerini zararsız hale getirir ---
@@ -720,9 +721,34 @@ async function confirmLogin() {
         }
     }
 
+    // --- KICK (Sohbetten Atma) sinyalini dinler ---
+    // Eskiden sadece presence kaydı siliniyordu, ama bu kişinin mesaj okumasını engellemiyordu
+    // (onay durumu presence'tan bağımsız, users düğümünde kalıcı olarak tutuluyor). Şimdi ayrı bir
+    // "kicked" sinyali kullanılıyor: bu sinyal geldiği anda mesaj dinleyicisi durdurulup ekran kilitleniyor.
+    function listenForKick() {
+        db.ref('kicked/' + myName).on('value', snap => {
+            if (snap.exists()) {
+                // Mesaj akışını durdur
+                db.ref('messages').off();
+                db.ref('presence/' + myName).remove();
+                db.ref('kicked/' + myName).remove();
+
+                const win = document.getElementById('chat-window');
+                if (win) win.innerHTML = `<div class="system-msg" style="border-color:#ff4b2b; color:#ff4b2b; background:rgba(255,75,43,0.15);">⚠️ Sohbet bağlantınız koptu.<br>Devam etmek için sayfayı yenileyin.</div>`;
+
+                const msgInput = document.getElementById('msg');
+                if (msgInput) { msgInput.disabled = true; msgInput.placeholder = "Bağlantı koptu, sayfayı yenileyin..."; }
+
+                const toolsWidget = document.getElementById('tools-widget');
+                if (toolsWidget) { toolsWidget.style.opacity = "0.3"; toolsWidget.style.pointerEvents = "none"; }
+            }
+        });
+    }
+
     async function kickUser(tNick) {
         if(confirm(tNick + " kullanıcısını sohbetten atmak istiyor musunuz?")) {
             await db.ref('presence/' + tNick).remove();
+            await db.ref('kicked/' + tNick).set(Date.now()); // Atılan kişinin ekranına anında ulaşan sinyal
             db.ref('messages').push().set({ u: "SİSTEM", m: `⚠️ ${tNick} kurallar gereği sohbetten uzaklaştırıldı.`, type: "system" });
             alert(tNick + " atıldı.");
         }
