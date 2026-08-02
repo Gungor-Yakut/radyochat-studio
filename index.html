@@ -162,6 +162,33 @@
         startCounter();
     };
 
+    // --- Güvenlik: mesaj metnindeki HTML özel karakterlerini zararsız hale getirir ---
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text == null ? '' : String(text);
+        return div.innerHTML;
+    }
+
+    // --- URL/link tespiti: metin içindeki http(s):// veya www. ile başlayan adresleri tıklanabilir linke çevirir ---
+    // NOT: text parametresi ÖNCE escapeHtml'den geçmiş olmalı, yoksa zararlı kod linke çevrilebilir.
+    function linkify(escapedText) {
+        const urlPattern = /((https?:\/\/|www\.)[^\s<]+)/gi;
+        return escapedText.replace(urlPattern, (match) => {
+            let href = match;
+            if (!/^https?:\/\//i.test(href)) href = 'https://' + href;
+            // Cümle sonu noktalama işaretlerini (. , ! ? gibi) linkin dışında bırak
+            const trailingPunctMatch = match.match(/[.,!?;:]+$/);
+            let trailing = '';
+            let linkText = match;
+            if (trailingPunctMatch) {
+                trailing = trailingPunctMatch[0];
+                linkText = match.slice(0, -trailing.length);
+                href = href.slice(0, href.length - trailing.length);
+            }
+            return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#00f2ff; text-decoration:underline; word-break:break-all;">${linkText}</a>${trailing}`;
+        });
+    }
+
     function loadMessages() {
         const win = document.getElementById('chat-window');
         if (!win) return; 
@@ -207,7 +234,8 @@
             const italicStyle = d.i ? "font-style: italic; display: inline-block; transform: skewX(-15deg); margin-left: 3px;" : "";
             
             mRow.style.cssText = `color:${d.c}; font-weight:${d.b ? 'bold' : 'normal'}; font-size:${fontSize}px; margin-bottom: 5px;`;
-            mRow.innerHTML = `<b style="color:${nCol}; margin-right: 5px; font-style: normal;">${d.u} :</b><span style="${italicStyle}">${d.m}</span>`;
+            const safeMsg = linkify(escapeHtml(d.m));
+            mRow.innerHTML = `<b style="color:${nCol}; margin-right: 5px; font-style: normal;">${escapeHtml(d.u)} :</b><span style="${italicStyle}">${safeMsg}</span>`;
             
             mRow.oncontextmenu = (e) => createContextMenu(e, { msgKey: s.key, name: d.u });
             win.prepend(mRow);
