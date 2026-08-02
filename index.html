@@ -72,8 +72,7 @@
                     <div class="grid-dot" style="background:#ff00ff" onclick="applyColor('#ff00ff')"></div>
                     <div class="grid-dot" style="background:#7f7f7f" onclick="applyColor('#7f7f7f')"></div>
                     <div class="grid-dot" style="background:#d2d2d2" onclick="applyColor('#d2d2d2')"></div>
-
-          <div class="grid-dot" style="background:#191970" onclick="applyColor('#191970')"></div>
+                    <div class="grid-dot" style="background:#191970" onclick="applyColor('#191970')"></div>
                     <div class="grid-dot" style="background:#001F3F" onclick="applyColor('#001F3F')"></div>
                     <div class="grid-dot" style="background:#0A192F" onclick="applyColor('#0A192F')"></div>
                     <div class="grid-dot" style="background:#003153" onclick="applyColor('#003153')"></div>
@@ -88,7 +87,6 @@
                     <div class="grid-dot" style="background:#082567" onclick="applyColor('#082567')"></div>
                     <div class="grid-dot" style="background:#1034A6" onclick="applyColor('#1034A6')"></div>
                     <div class="grid-dot" style="background:#002366" onclick="applyColor('#002366')"></div>
-                                         
                 </div>
                 <button onclick="document.getElementById('adv-picker').click()" style="width:100%; padding:5px; background:#222; border:1px solid #444; color:#fff; font-size:10px; margin-top:5px;">+ ÖZEL RENK</button>
                 <input type="color" id="adv-picker" style="display:none" oninput="applyColor(this.value)">
@@ -110,8 +108,6 @@
     <div class="user-count-box">Dinleyici: <span id="total-user-count">0</span></div>
 </div>
 
-<button id="btn-ban-list" onclick="toggleBanList()" style="display:none; position: fixed; top: 10px; right: 10px; z-index: 9999; background:rgba(255, 75, 43, 0.8); border:1px solid #ff4b2b; color:#fff; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; box-shadow: 0 0 10px rgba(255,75,43,0.5);">BANLILAR</button>
-
 <button id="btn-ban-list" class="widget" onclick="toggleBanList()" 
     style="display:none; position:relative; background:rgba(255, 75, 43, 0.8); border:1px solid #ff4b2b; color:#fff; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-weight: bold; z-index: 9999; overflow:hidden;">
     🚫 BANLILAR
@@ -121,29 +117,30 @@
         <h3 style="margin:0; color:#ff4b2b; font-size:14px;">YASAKLI LİSTESİ</h3>
         <span onclick="toggleBanList()" style="cursor:pointer; color:#888; font-size:20px; font-weight:bold;">×</span>
     </div>
-    <div id="ban-items-content" style="max-height:300px; overflow-y:auto; padding-right:5px;">
-        </div>
+    <div id="ban-items-content" style="max-height:300px; overflow-y:auto; padding-right:5px;"></div>
 </div>
 
 <script>
+    // CLOUDFLARE WORKERS API URL'NİZ (Lütfen buraya kendi workers adresinizi yazın)
+    const API_BASE_URL = "https://chat-backend-api.yakuttgungor.workers.dev";
+
     const firebaseConfig = { apiKey: "AIzaSyBeMsSLTbpmjzd7HrVKjhFIVAQ_goJsLUg", authDomain: "flat-chat-fa830.firebaseapp.com", databaseURL: "https://flat-chat-fa830-default-rtdb.europe-west1.firebasedatabase.app", projectId: "flat-chat-fa830" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const rootNick = "Filiz Yeşili FM";
 
     const rolePriority = { 
-    "Kurucu": 100, "KURUCU": 100,
-    "Yönetici": 90, "YÖNETİCİ": 90, "Yonetici": 90,
-    "Admin": 80, "ADMİN": 80,
-    "Teknik Servis": 70, "TEKNİK SERVİS": 70, "Teknik Ekip": 70,
-    "Dj": 60, "DJ": 60,
-    "Üye": 20, "ÜYE": 20, "Uye": 20,
-    "Misafir": 10, "MİSAFİR": 10, "Misafir": 10 
-};
-
+        "Kurucu": 100, "KURUCU": 100,
+        "Yönetici": 90, "YÖNETİCİ": 90, "Yonetici": 90,
+        "Admin": 80, "ADMİN": 80,
+        "Teknik Servis": 70, "TEKNİK SERVİS": 70, "Teknik Ekip": 70,
+        "Dj": 60, "DJ": 60,
+        "Üye": 20, "ÜYE": 20, "Uye": 20,
+        "Misafir": 10, "MİSAFİR": 10
+    };
 
     let myName = sessionStorage.getItem("filiz_chat_nick") || "";
-let loginTime = Date.now(); // Sayfa yüklendiği anın zamanını tutar
+    let loginTime = Date.now(); 
     let currentColor = localStorage.getItem("filiz_chat_color") || "#00f2ff";
     let isVerified = false, fontSize = 14, myRole = "Misafir", isBold = false, isItalic = false;
     let myPerms = {}; let allRoles = {}; let draggies = [];
@@ -162,69 +159,59 @@ let loginTime = Date.now(); // Sayfa yüklendiği anın zamanını tutar
             sessionStorage.setItem("filiz_chat_nick", myName);
         }
         startAuth(); 
-startCounter(); // Sayacı başlat
+        startCounter();
     };
 
     function loadMessages() {
-    const win = document.getElementById('chat-window');
-    if (!win) return; // Eğer chat penceresi yoksa dur
-    db.ref('messages').off(); 
-    win.innerHTML = "";
+        const win = document.getElementById('chat-window');
+        if (!win) return; 
+        db.ref('messages').off(); 
+        win.innerHTML = "";
 
-    // ONAY KONTROLÜ
-    if (!isVerified) {
-        win.innerHTML = `<div class="system-msg" style="border:none; background:none; color:#ff4b2b;">🔒 Sohbeti görmek için onay bekleniyor...</div>`;
-        return;
-    }
-    
-    db.ref('messages').limitToLast(50).on('child_added', s => {
-        const d = s.val();
-        // GÜÇLENDİRİLMİŞ FİLTRE:
-    // 1. Eğer mesajın zamanı girişinden önceyse GÖSTERME
-    // 2. Eğer mesajın zamanı hiç yoksa (eski mesaj demektir) yine GÖSTERME
-    if (!d.timestamp || d.timestamp < loginTime) {
-        return; 
-    }
-        // 1. EĞER YENİ GELEN BİR SİSTEM MESAJI DEĞİLSE, ESKİ SİSTEM MESAJINI HEMEN SİL
-        const oldSystemMsg = win.querySelector('.system-msg');
-        if (oldSystemMsg && d.type !== "system") {
-            oldSystemMsg.remove();
+        if (!isVerified) {
+            win.innerHTML = `<div class="system-msg" style="border:none; background:none; color:#ff4b2b;">🔒 Sohbeti görmek için onay bekleniyor...</div>`;
+            return;
         }
-
-        const mRow = document.createElement('div');
-        mRow.id = "msg-" + s.key;
         
-        // --- SİSTEM MESAJI BLOĞU ---
-        if(d.type === "system") {
-            mRow.className = "system-msg";
-            mRow.innerText = d.m;
-            win.prepend(mRow);
+        db.ref('messages').limitToLast(50).on('child_added', s => {
+            const d = s.val();
+            if (!d.timestamp || d.timestamp < loginTime) {
+                return; 
+            }
+            const oldSystemMsg = win.querySelector('.system-msg');
+            if (oldSystemMsg && d.type !== "system") {
+                oldSystemMsg.remove();
+            }
 
-            // 2. SİSTEM MESAJI 10 SANİYE SONRA KENDİLİĞİNDEN SİLİNSİN
-            setTimeout(() => {
-                const target = document.getElementById("msg-" + s.key);
-                if (target) {
-                    target.style.transition = "opacity 0.8s";
-                    target.style.opacity = "0";
-                    setTimeout(() => target.remove(), 800);
-                }
-            }, 10000); // 10 saniye
+            const mRow = document.createElement('div');
+            mRow.id = "msg-" + s.key;
             
-            return; // Sistem mesajıysa burada dur, aşağıya (normal mesaj kısmına) geçme
-        }
+            if(d.type === "system") {
+                mRow.className = "system-msg";
+                mRow.innerText = d.m;
+                win.prepend(mRow);
 
-        // --- NORMAL MESAJ BLOĞU ---
-        mRow.className = "chat-msg-row";
-        const nCol = d.uc || d.c || "#00f2ff";
-        const italicStyle = d.i ? "font-style: italic; display: inline-block; transform: skewX(-15deg); margin-left: 3px;" : "";
-        
-        mRow.style.cssText = `color:${d.c}; font-weight:${d.b ? 'bold' : 'normal'}; font-size:${fontSize}px; margin-bottom: 5px;`;
-        mRow.innerHTML = `<b style="color:${nCol}; margin-right: 5px; font-style: normal;">${d.u} :</b><span style="${italicStyle}">${d.m}</span>`;
-        
-        mRow.oncontextmenu = (e) => createContextMenu(e, { msgKey: s.key, name: d.u });
-        win.prepend(mRow);
-    });
+                setTimeout(() => {
+                    const target = document.getElementById("msg-" + s.key);
+                    if (target) {
+                        target.style.transition = "opacity 0.8s";
+                        target.style.opacity = "0";
+                        setTimeout(() => target.remove(), 800);
+                    }
+                }, 10000); 
+                return; 
+            }
 
+            mRow.className = "chat-msg-row";
+            const nCol = d.uc || d.c || "#00f2ff";
+            const italicStyle = d.i ? "font-style: italic; display: inline-block; transform: skewX(-15deg); margin-left: 3px;" : "";
+            
+            mRow.style.cssText = `color:${d.c}; font-weight:${d.b ? 'bold' : 'normal'}; font-size:${fontSize}px; margin-bottom: 5px;`;
+            mRow.innerHTML = `<b style="color:${nCol}; margin-right: 5px; font-style: normal;">${d.u} :</b><span style="${italicStyle}">${d.m}</span>`;
+            
+            mRow.oncontextmenu = (e) => createContextMenu(e, { msgKey: s.key, name: d.u });
+            win.prepend(mRow);
+        });
         
         db.ref('messages').on('child_removed', s => { 
             const el = document.getElementById("msg-" + s.key); 
@@ -232,35 +219,28 @@ startCounter(); // Sayacı başlat
         });
     }
 
-
-
     document.getElementById('msg').onkeypress = async (e) => { 
-    if(e.key === "Enter" && e.target.value.trim() !== "") { 
-        if(isVerified) { 
-            db.ref('messages').push().set({ 
-                u: myName, 
-                m: e.target.value, 
-                c: currentColor, 
-                uc: currentColor, 
-                b: isBold, 
-                i: isItalic,
-                timestamp: Date.now() // Mesajın atıldığı tam saniye
-            }); 
-            e.target.value = ""; 
-        } else {
-            alert("Sohbet izniniz henüz onaylanmamış!");
-        }
-    } 
-};
+        if(e.key === "Enter" && e.target.value.trim() !== "") { 
+            if(isVerified) { 
+                db.ref('messages').push().set({ 
+                    u: myName, 
+                    m: e.target.value, 
+                    c: currentColor, 
+                    uc: currentColor, 
+                    b: isBold, 
+                    i: isItalic,
+                    timestamp: Date.now() 
+                }); 
+                e.target.value = ""; 
+            } else {
+                alert("Sohbet izniniz henüz onaylanmamış!");
+            }
+        } 
+    };
 
-// Dinleyici Sayısını Dinleyen Fonksiyon
     function startCounter() {
-        const countRef = db.ref('presence');
-        
-        countRef.on('value', (snapshot) => {
-            // snapshot.numChildren() presence altındaki toplam kayıt sayısını verir
+        db.ref('presence').on('value', (snapshot) => {
             const totalUsers = snapshot.numChildren();
-            
             const countElement = document.getElementById('total-user-count');
             if (countElement) {
                 countElement.innerText = totalUsers || 0;
@@ -269,242 +249,178 @@ startCounter(); // Sayacı başlat
     }
 
     function loadLayout() {
-    db.ref('layout').once('value', s => {
-        const d = s.val() || {};
-        widgetIds.forEach(id => {
-            const el = document.getElementById(id);
-            if (el && d[id]) {
-                // Koordinatları ve boyutları px olarak uygula
-                el.style.left = d[id].x + "px";
-                el.style.top = d[id].y + "px";
-                el.style.width = d[id].w + "px";
-                el.style.height = d[id].h + "px";
-                // Önemli: Transform kalıntılarını sıfırla
-                el.style.transform = "none"; 
-            }
-            if (el) el.style.opacity = "1";
+        db.ref('layout').once('value', s => {
+            const d = s.val() || {};
+            widgetIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el && d[id]) {
+                    el.style.left = d[id].x + "px";
+                    el.style.top = d[id].y + "px";
+                    el.style.width = d[id].w + "px";
+                    el.style.height = d[id].h + "px";
+                    el.style.transform = "none"; 
+                }
+                if (el) el.style.opacity = "1";
+            });
         });
-    });
-}
+    }
 
+    async function startAuth() {
+        const presenceRef = db.ref('presence/' + myName);
+        presenceRef.onDisconnect().remove();
 
-function setupPresence(uid) {
-    // Kullanıcının online olduğu konum
-    const userStatusRef = db.ref('presence/' + uid);
+        db.ref('users/' + myName).on('value', async s => {
+            const ud = s.val() || {};
+            myRole = ud.role || "Misafir";
+            
+            if (myRole !== "Kurucu") {
+                const pSnap = await db.ref('permissions/' + myRole).once('value');
+                myPerms = pSnap.val() || {};
+            } else {
+                myPerms = { canAccessAdmin: true, canBan: true, canKick: true, canUseColors: true, canClearChat: true, canDeleteMsgs: true };
+            }
 
-    // Firebase'in özel .info/connected yolu: Bağlantı durumunu kontrol eder
-    db.ref('.info/connected').on('value', (snapshot) => {
-        if (snapshot.val() === false) {
-            return; // Bağlantı yoksa bir şey yapma
-        }
+            db.ref('presence/' + myName).on('value', ps => {
+                const pd = ps.val() || {};
+                const isF = ud.isVerified === true;
+                const isV = pd.tempVerify === true;
+                isVerified = (isF || isV); 
 
-        // Bağlantı koptuğunda (tarayıcı kapandığında) yapılacak işlem:
-        // Sunucuya "benim verimi SİL" talimatı veriyoruz
-        userStatusRef.onDisconnect().remove().then(() => {
-            // Bağlantı şu an aktif, online verisini yazalım
-            userStatusRef.set({
-                name: uid,
+                const authBtn = document.getElementById('auth-btn');
+                const msgInput = document.getElementById('msg');
+                const toolsWidget = document.getElementById('tools-widget');
+
+                if (myName && !myName.startsWith("Guest")) {
+                    authBtn.innerText = "👤 " + myName;
+                    authBtn.style.color = "#00fc00";
+                } else {
+                    authBtn.innerText = "GİRİŞ YAP";
+                    authBtn.style.color = "#00f2ff";
+                }
+
+                if (isVerified) {
+                    if(msgInput) { msgInput.disabled = false; msgInput.placeholder = "Mesajınızı yazın..."; }
+                    if(toolsWidget) { toolsWidget.style.opacity = "1"; toolsWidget.style.pointerEvents = "auto"; }
+                } else {
+                    if(msgInput) { msgInput.disabled = true; msgInput.placeholder = "Onay bekleniyor..."; }
+                    if(toolsWidget) { toolsWidget.style.opacity = "0.3"; toolsWidget.style.pointerEvents = "none"; }
+                }
+                
+                loadMessages();
+                checkBanViewPerms();
+            });
+
+            presenceRef.set({
+                name: myName,
                 role: myRole,
+                isVerified: ud.isVerified || false,
+                tempVerify: false,
                 color: currentColor,
                 lastSeen: firebase.database.ServerValue.TIMESTAMP
             });
         });
-    });
-}
 
-    async function startAuth() {
-    const presenceRef = db.ref('presence/' + myName);
-    presenceRef.onDisconnect().remove();
-
-    // Kullanıcı verilerini ve onay durumunu dinle
-    db.ref('users/' + myName).on('value', async s => {
-        const ud = s.val() || {};
-        myRole = ud.role || "Misafir";
-        
-
-// YENİ EKLE: Yetkileri Firebase'den çek
-    if (myRole !== "Kurucu") {
-        const pSnap = await db.ref('permissions/' + myRole).once('value');
-        myPerms = pSnap.val() || {};
-    } else {
-        // Kurucu ise tüm yetkileri true yap
-        myPerms = { canAccessAdmin: true, canBan: true, canKick: true };
+        loadUsers();
     }
 
-        // Presence tablosundaki anlık durumu dinle
-        db.ref('presence/' + myName).on('value', ps => {
-            const pd = ps.val() || {};
-            const isF = ud.isVerified === true;
-            const isV = pd.tempVerify === true;
-            isVerified = (isF || isV); 
-
-            const authBtn = document.getElementById('auth-btn');
-            const msgInput = document.getElementById('msg');
-            const toolsWidget = document.getElementById('tools-widget');
-
-            if (ud.password) {
-                authBtn.innerText = "👤 " + myName;
-                authBtn.style.color = "#00fc00";
-            } else {
-                authBtn.innerText = "GİRİŞ YAP";
-            }
-
-            if (isVerified) {
-                if(msgInput) { msgInput.disabled = false; msgInput.placeholder = "Mesajınızı yazın..."; }
-                if(toolsWidget) { toolsWidget.style.opacity = "1"; toolsWidget.style.pointerEvents = "auto"; }
-            } else {
-                if(msgInput) { msgInput.disabled = true; msgInput.placeholder = "Onay bekleniyor..."; }
-                if(toolsWidget) { toolsWidget.style.opacity = "0.3"; toolsWidget.style.pointerEvents = "none"; }
-            }
+    function loadUsers() {
+        db.ref('presence').on('value', s => {
+            const list = document.getElementById('user-list'); 
+            if(!list) return;
+            list.innerHTML = "";
             
-            // Onay durumu her değiştiğinde mesaj alanını tazele
-            loadMessages();
-        });
+            let usersArray = [];
+            s.forEach(u => {
+                const ud = u.val();
+                if(ud.name) usersArray.push(ud);
+            });
 
-        // Online listesine kendini kaydet
-        presenceRef.set({
-            name: myName,
-            role: myRole,
-            isVerified: ud.isVerified || false,
-            tempVerify: false,
-            color: currentColor,
-            lastSeen: firebase.database.ServerValue.TIMESTAMP
-        });
-    });
+            usersArray.sort((a, b) => {
+                const priorityA = rolePriority[a.role] || 0;
+                const priorityB = rolePriority[b.role] || 0;
+                return priorityB - priorityA; 
+            });
 
-    loadUsers();
-}
+            usersArray.forEach(ud => {
+                const isAdmin = (myRole === "Kurucu" || myRole === "Yönetici" || myRole === "Admin" || myRole === "Dj" || (myPerms && myPerms.canAccessAdmin));
+                const hasP = ud.isVerified === true; 
+                const hasT = ud.tempVerify === true; 
+                const isApproved = (hasP || hasT); 
 
-function loadUsers() {
-    db.ref('presence').on('value', s => {
-        const list = document.getElementById('user-list'); 
-        if(!list) return;
-        list.innerHTML = "";
-        
-        let usersArray = [];
+                const showRole = (ud.role !== "Üye" && ud.role !== "Misafir");
 
-        // 1. Önce tüm kullanıcıları bir diziye topla
-        s.forEach(u => {
-            const ud = u.val();
-            if(ud.name) {
-                usersArray.push(ud);
-            }
-        });
+                const div = document.createElement('div'); 
+                div.className = "online-user-row-container";
+                
+                let verifyClass = hasP ? 'tick-f' : (hasT ? 'tick-v' : '');
+                let verifyIcon = hasP ? 'F' : (hasT ? '✓' : '');
 
-        // 2. Kullanıcıları rütbe önceliğine göre sırala
-        usersArray.sort((a, b) => {
-            const priorityA = rolePriority[a.role] || 0;
-            const priorityB = rolePriority[b.role] || 0;
-            return priorityB - priorityA; 
-        });
-
-        // 3. Sıralanmış listeyi ekrana bas
-        usersArray.forEach(ud => {
-            const isAdmin = (myRole === "Kurucu" || myRole === "Yönetici" || myRole === "Admin" || myRole === "Dj" || (myPerms && myPerms.canAccessAdmin));
-            const hasP = ud.isVerified === true; 
-            const hasT = ud.tempVerify === true; 
-            const isApproved = (hasP || hasT); 
-
-            // Rütbe Filtresi: Üye ve Misafir ise rütbe ismini gösterme
-            const showRole = (ud.role !== "Üye" && ud.role !== "Misafir");
-
-            const div = document.createElement('div'); 
-            div.className = "online-user-row-container";
-            
-            let verifyClass = hasP ? 'tick-f' : (hasT ? 'tick-v' : '');
-            let verifyIcon = hasP ? 'F' : (hasT ? '✓' : '');
-
-            div.innerHTML = `
-                <div class="online-user-row">
-                    <div class="verify-box ${verifyClass}" onclick="quickVerify('${ud.name}', ${isApproved})">
-                        ${verifyIcon}
+                div.innerHTML = `
+                    <div class="online-user-row">
+                        <div class="verify-box ${verifyClass}" onclick="quickVerify('${ud.name}', ${isApproved})">
+                            ${verifyIcon}
+                        </div>
+                        <span class="user-name-label ${isApproved ? '' : 'unverified-text'}" 
+                              style="color:${ud.color || '#fff'}; cursor:pointer;" 
+                              onclick="toggleUserActions('${ud.name}')">
+                            ● ${ud.name} 
+                            ${showRole ? `<small style="opacity:0.6; font-size:10px; display: inline-block;">[${ud.role || 'Misafir'}]</small>` : ''}
+                        </span>
                     </div>
-
-                    <span class="user-name-label ${isApproved ? '' : 'unverified-text'}" 
-                          style="color:${ud.color || '#fff'}; cursor:pointer;" 
-                          onclick="toggleUserActions('${ud.name}')">
-                        ● ${ud.name} 
-                        
-                        ${showRole ? `
-                        <small style="opacity:0.6; font-size:10px; text-decoration: none !important; display: inline-block;">
-                            [${ud.role || 'Misafir'}]
-                        </small>
-                        ` : ''}
-                    </span>
-                </div>
-
-                ${isAdmin && ud.name !== myName ? `
-                <div id="actions-${ud.name.replace(/\s+/g, '_')}" class="quick-action-panel">
-                    <div class="action-btn btn-kick" onclick="kickUser('${ud.name}')">SOHBETTEN AT</div>
-                    <div class="action-btn btn-ban" onclick="quickBanUser('${ud.name}')">KALICI BANLA</div>
-                </div>
-                ` : ''}
-            `;
-            list.appendChild(div);
+                    ${isAdmin && ud.name !== myName ? `
+                    <div id="actions-${ud.name.replace(/\s+/g, '_')}" class="quick-action-panel">
+                        <div class="action-btn btn-kick" onclick="kickUser('${ud.name}')">SOHBETTEN AT</div>
+                        <div class="action-btn btn-ban" onclick="quickBanUser('${ud.name}')">KALICI BANLA</div>
+                    </div>
+                    ` : ''}
+                `;
+                list.appendChild(div);
+            });
         });
-
-        const countEl = document.getElementById('total-user-count');
-        if (countEl) countEl.innerText = usersArray.length;
-    });
-}
+    }
 
     function createContextMenu(e, t = null) { 
-    e.preventDefault(); 
-    const menu = document.getElementById('context-menu'); 
-    menu.innerHTML = ""; 
+        e.preventDefault(); 
+        const menu = document.getElementById('context-menu'); 
+        menu.innerHTML = ""; 
 
-    // YETKİ KONTROLLERİ (Admin panelindeki checkbox isimlerine göre)
-    const canSeeAdminPanel = (myRole === "Kurucu" || myPerms.canAccessAdmin);
-    const canClear = (myRole === "Kurucu" || myPerms.canClearChat); // Sohbet Temizleme Yetkisi
-    const canDelete = (myRole === "Kurucu" || myPerms.canDeleteMsgs); // Tekil Mesaj Silme
-    const canBan = (myRole === "Kurucu" || myPerms.canBan); // Banlama Yetkisi
-    const canMove = (myRole === "Kurucu" || myRole === "Teknik Servis"); // Taşıma/Boyutlandırma
+        const canSeeAdminPanel = (myRole === "Kurucu" || myPerms.canAccessAdmin);
+        const canClear = (myRole === "Kurucu" || myPerms.canClearChat); 
+        const canDelete = (myRole === "Kurucu" || myPerms.canDeleteMsgs); 
+        const canBan = (myRole === "Kurucu" || myPerms.canBan); 
 
-    // 1. Yönetim Paneli Butonu
-    if(canSeeAdminPanel) {
-        addMenuItem(menu, "⚙ YÖNETİM PANELİ", () => window.open('admin.html', '_blank'), "menu-success"); 
-    }
+        if(canSeeAdminPanel) {
+            addMenuItem(menu, "⚙ YÖNETİM PANELİ", () => window.open('admin.html', '_blank'), "menu-success"); 
+        }
+        if(t && t.msgKey && canDelete) {
+            addMenuItem(menu, "🗑 MESAJI SİL", () => { 
+                if(confirm("Bu mesajı silmek istiyor musunuz?")) db.ref('messages/'+t.msgKey).remove(); 
+            }, "menu-danger");
+        }
+        if(canClear) {
+            addMenuItem(menu, "🔥 SOHBETİ TEMİZLE", () => clearMsgs(), "menu-danger");
+        }
+        if(t && t.name && canBan && t.name !== myName) {
+            const myRank = rolePriority[myRole] || 0;
+            const targetRank = rolePriority[t.role] || 0;
+            if (myRank > targetRank || myRole === "Kurucu") {
+                addMenuItem(menu, `🚫 ${t.name} BANLA`, () => quickBanUser(t.name), "menu-danger");
+            }
+        }
 
-    // 2. Mesaj Silme (Sadece bir mesajın üzerindeyken çıkar)
-    if(t && t.msgKey && canDelete) {
-        addMenuItem(menu, "🗑 MESAJI SİL", () => { 
-            if(confirm("Bu mesajı silmek istiyor musunuz?")) db.ref('messages/'+t.msgKey).remove(); 
-        }, "menu-danger");
-    }
+        const allowedRanks = ["Kurucu", "Teknik Servis"];
+        if (allowedRanks.includes(myRole)) { 
+            addMenuItem(menu, "✥ TAŞIMA MODU", () => setEditMode('move'));  
+            addMenuItem(menu, "⤗ BOYUTLANDIRMA MODU", () => setEditMode('resize'));  
+            addMenuItem(menu, "✔ KAYDET VE KİLİTLE", () => saveAndLock(), "menu-success");  
+        }
 
-    // 3. Sohbeti Temizle (Genel temizlik)
-    if(canClear) {
-        addMenuItem(menu, "🔥 SOHBETİ TEMİZLE", () => clearMsgs(), "menu-danger");
-    }
-
-    // 4. Kullanıcı Banlama (Kullanıcı ismine sağ tıklandığında)
-    if(t && t.name && canBan && t.name !== myName) {
-        const myRank = rolePriority[myRole] || 0;
-        const targetRank = rolePriority[t.role] || 0;
-        
-        // Sadece alt rütbeni banlayabilirsin
-        if (myRank > targetRank) {
-            addMenuItem(menu, `🚫 ${t.name} BANLA`, () => quickBanUser(t.name), "menu-danger");
+        if(menu.innerHTML !== "") {
+            menu.style.display = 'block'; 
+            menu.style.left = e.clientX + 'px'; 
+            menu.style.top = e.clientY + 'px';
         }
     }
-
-    // 5. Taşıma ve Yerleşim Ayarları
-   // createContextMenu fonksiyonu içindeki 5. maddeyi bu blokla değiştir:
-const allowedRanks = ["Kurucu", "Teknik Servis"]; // Sadece bu rütbeler görebilir
-
-if (allowedRanks.includes(myRole)) { 
-    addMenuItem(menu, "✥ TAŞIMA MODU", () => setEditMode('move'));  
-    addMenuItem(menu, "⤗ BOYUTLANDIRMA MODU", () => setEditMode('resize'));  
-    addMenuItem(menu, "✔ KAYDET VE KİLİTLE", () => saveAndLock(), "menu-success");  
-}
-
-    // Menüde en az bir seçenek varsa göster
-    if(menu.innerHTML !== "") {
-        menu.style.display = 'block'; 
-        menu.style.left = e.clientX + 'px'; 
-        menu.style.top = e.clientY + 'px';
-    }
-}
 
     function addMenuItem(p, t, a, c = "") { 
         const d = document.createElement('div'); d.className = "menu-item " + c; d.innerText = t; 
@@ -513,528 +429,354 @@ if (allowedRanks.includes(myRole)) {
 
     document.addEventListener('click', () => document.getElementById('context-menu').style.display = 'none');
     document.addEventListener('contextmenu', (e) => { if(e.target.tagName !== 'INPUT') createContextMenu(e); }, false);
-// Boşluğa tıklandığında panelleri kapatma kontrolü
-document.addEventListener('mousedown', (e) => {
-    const colorPanel = document.getElementById('color-dropdown');
-    const emojiPanel = document.getElementById('emoji-dropdown');
-    const colorBtn = document.getElementById('current-color-btn');
-    const emojiBtn = document.querySelector('button[onclick="togglePanel(\'emoji-dropdown\')"]');
 
-    // Renk paneli için kontrol: Tıklanan yer panel veya buton değilse kapat
-    if (colorPanel.style.display === 'flex' && !colorPanel.contains(e.target) && e.target !== colorBtn) {
-        colorPanel.style.display = 'none';
-    }
+    document.addEventListener('mousedown', (e) => {
+        const colorPanel = document.getElementById('color-dropdown');
+        const emojiPanel = document.getElementById('emoji-dropdown');
+        const colorBtn = document.getElementById('current-color-btn');
+        if (colorPanel.style.display === 'flex' && !colorPanel.contains(e.target) && e.target !== colorBtn) colorPanel.style.display = 'none';
+        if (emojiPanel.style.display === 'flex' && !emojiPanel.contains(e.target)) emojiPanel.style.display = 'none';
+    });
 
-    // Emoji paneli için kontrol: Tıklanan yer panel veya buton değilse kapat
-    if (emojiPanel.style.display === 'flex' && !emojiPanel.contains(e.target) && e.target !== emojiBtn) {
-        emojiPanel.style.display = 'none';
-    }
-});
+    async function quickVerify(tNick) {
+        const currentRole = (myRole || "").toLowerCase().trim();
+        const adminRanks = ["kurucu", "admin", "yönetici", "teknik ekip", "teknik servis"];
+        const isAdmin = adminRanks.includes(currentRole);
+        const isDJ = (currentRole === "dj");
 
-async function quickVerify(tNick) {
-    const currentRole = (myRole || "").toLowerCase().trim();
-    const adminRanks = ["kurucu", "admin", "yönetici", "teknik ekip", "teknik servis"];
-    
-    const isAdmin = adminRanks.includes(currentRole);
-    const isDJ = (currentRole === "dj");
+        if (!isAdmin && !isDJ) return;
 
-    if (!isAdmin && !isDJ) return; // Yetki yoksa sessizce çık
+        const presenceSnap = await db.ref('presence/' + tNick).once('value');
+        const pData = presenceSnap.val() || {};
+        const hasF = pData.isVerified === true;       
+        const hasCheck = pData.tempVerify === true;    
 
-    // Veritabanından anlık durumu çek
-    const presenceSnap = await db.ref('presence/' + tNick).once('value');
-    const pData = presenceSnap.val() || {};
-    
-    const hasF = pData.isVerified === true;       
-    const hasCheck = pData.tempVerify === true;    
-
-    // --- DJ MANTIĞI (Aç/Kapat) ---
-    if (isDJ) {
-        await db.ref('presence/' + tNick).update({ 
-            tempVerify: !(hasF || hasCheck) // Varsa kaldır, yoksa ekle
-        });
-        return;
-    }
-
-    // --- ÜST YÖNETİM DÖNGÜSÜ (✓ -> F -> SIFIRLA) ---
-    if (isAdmin) {
-        // 1. DURUM: Hiçbir şey yoksa -> GEÇİCİ ONAY (✓)
-        if (!hasF && !hasCheck) {
-            await db.ref('presence/' + tNick).update({ 
-                tempVerify: true,
-                isVerified: false 
-            });
-        } 
-        // 2. DURUM: Geçici varsa -> KALICI ONAY (F)
-        else if (hasCheck && !hasF) {
-            await db.ref('users/' + tNick).update({ 
-                isVerified: true, 
-                role: "Üye" 
-            });
-            await db.ref('presence/' + tNick).update({ 
-                isVerified: true, 
-                tempVerify: false, 
-                role: "Üye" 
-            });
+        if (isDJ) {
+            await db.ref('presence/' + tNick).update({ tempVerify: !(hasF || hasCheck) });
+            return;
         }
-        // 3. DURUM: Kalıcı varsa -> HER ŞEYİ SIFIRLA (Onaysız Misafir)
-        else if (hasF) {
-            await db.ref('users/' + tNick).update({ isVerified: false, role: "Misafir" });
-            await db.ref('presence/' + tNick).update({ isVerified: false, tempVerify: false, role: "Misafir" });
+
+        if (isAdmin) {
+            if (!hasF && !hasCheck) {
+                await db.ref('presence/' + tNick).update({ tempVerify: true, isVerified: false });
+            } else if (hasCheck && !hasF) {
+                await db.ref('users/' + tNick).update({ isVerified: true, role: "Üye" });
+                await db.ref('presence/' + tNick).update({ isVerified: true, tempVerify: false, role: "Üye" });
+            } else if (hasF) {
+                await db.ref('users/' + tNick).update({ isVerified: false, role: "Misafir" });
+                await db.ref('presence/' + tNick).update({ isVerified: false, tempVerify: false, role: "Misafir" });
+            }
         }
     }
-}
 
     function setEditMode(type) {
         if (myRole !== "Kurucu" && myRole !== "Teknik Servis") return alert("Yetkiniz yok!");
-    // Önce varsa eski kalkanları ve sürükleme özelliklerini temizle
-    draggies.forEach(d => d.destroy()); 
-    draggies = [];
-    document.querySelectorAll('.widget-overlay').forEach(el => el.remove());
+        draggies.forEach(d => d.destroy()); 
+        draggies = [];
+        document.querySelectorAll('.widget-overlay').forEach(el => el.remove());
 
-    widgetIds.forEach(id => {
-        const el = document.getElementById(id);
-        if(!el) return;
+        widgetIds.forEach(id => {
+            const el = document.getElementById(id);
+            if(!el) return;
+            el.classList.remove('edit-mode-active', 'resize-mode-active');
 
-        el.classList.remove('edit-mode-active', 'resize-mode-active');
+            if(type === 'move') {
+                el.classList.add('edit-mode-active');
+                const overlay = document.createElement('div');
+                overlay.className = 'widget-overlay';
+                el.appendChild(overlay);
 
-        if(type === 'move') {
-            el.classList.add('edit-mode-active');
-
-            // --- KALKAN EKLEME (Tıklamaları engeller) ---
-            const overlay = document.createElement('div');
-            overlay.className = 'widget-overlay';
-            el.appendChild(overlay);
-
-            const draggie = new Draggabilly(el, {
-    handle: '.widget-overlay',
-    containment: false // Sayfa dışına taşmayı engellemek için bazen bunu true yaparlar, false kalsın.
-});
-
-            draggie.on('dragEnd', function() { 
-                db.ref('layout/'+id).update({ x: this.position.x, y: this.position.y }); 
-            });
-            draggies.push(draggie);
-        } else { 
-            el.classList.add('resize-mode-active'); 
-        }
-    });
-}
-
+                const draggie = new Draggabilly(el, { handle: '.widget-overlay', containment: false });
+                draggie.on('dragEnd', function() { 
+                    db.ref('layout/'+id).update({ x: this.position.x, y: this.position.y }); 
+                });
+                draggies.push(draggie);
+            } else { 
+                el.classList.add('resize-mode-active'); 
+            }
+        });
+    }
 
     function saveAndLock() {
-    // 1. Draggabilly örneklerini tek tek dönüp son konumlarını bulalım
-    draggies.forEach(d => {
-        // d.element sürüklenen widget'tır
-        const id = d.element.id;
-        
-        // Draggabilly'nin içindeki gerçek x ve y (transform dahil hesaplanmış)
-        // Eğer sürüklenmediyse offset değerlerini al
-        const xPos = d.position.x;
-        const yPos = d.position.y;
-        
-        const w = d.element.offsetWidth;
-        const h = d.element.offsetHeight;
-
-        // Firebase'e kaydet
-        db.ref('layout/' + id).update({
-            x: Math.round(xPos),
-            y: Math.round(yPos),
-            w: Math.round(w),
-            h: Math.round(h)
+        draggies.forEach(d => {
+            const id = d.element.id;
+            db.ref('layout/' + id).update({
+                x: Math.round(d.position.x),
+                y: Math.round(d.position.y),
+                w: Math.round(d.element.offsetWidth),
+                h: Math.round(d.element.offsetHeight)
+            });
+            d.destroy();
         });
 
-        // Draggabilly'yi kapat
-        d.destroy();
-    });
+        widgetIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.classList.contains('resize-mode-active')) {
+                 db.ref('layout/'+id).update({
+                    w: el.offsetWidth,
+                    h: el.offsetHeight,
+                    x: parseInt(el.style.left) || el.offsetLeft,
+                    y: parseInt(el.style.top) || el.offsetTop
+                });
+            }
+            if(el) el.classList.remove('edit-mode-active', 'resize-mode-active');
+        });
 
-    // 2. Eğer sürüklenmemiş ama boyutu değişmiş (resize) widgetlar varsa onları da kapsayalım
-    widgetIds.forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        
-        // Sadece resize modundakiler için (draggies içinde olmayanlar)
-        if(el.classList.contains('resize-mode-active')) {
-             db.ref('layout/'+id).update({
-                w: el.offsetWidth,
-                h: el.offsetHeight,
-                x: parseInt(el.style.left) || el.offsetLeft,
-                y: parseInt(el.style.top) || el.offsetTop
-            });
-        }
-        
-        el.classList.remove('edit-mode-active', 'resize-mode-active');
-    });
+        document.querySelectorAll('.widget-overlay').forEach(el => el.remove());
+        draggies = [];
+        alert("Yerleşim kaydedildi!");
+        location.reload(); 
+    }
 
-    // 3. Kalkanları temizle
-    document.querySelectorAll('.widget-overlay').forEach(el => el.remove());
-    draggies = [];
-
-    alert("Yerleşim kaydedildi!");
-    location.reload(); 
-}
-
-
-    async function confirmLogin() { 
+    // --- TURSO ENTEGRASYONLU YENİ GİRİŞ / KAYIT FONKSİYONU ---
+async function confirmLogin() { 
     const n = document.getElementById('nick-input').value.trim(); 
     const p = document.getElementById('pass-input').value.trim(); 
     if(!n || !p) return alert("Eksik bilgi!");
 
-    // Eğer misafir olarak bağlıysa eski misafir kaydını temizle
-    if(myName && myName.startsWith("Guest")) {
-        await db.ref('presence/' + myName).remove();
-    }
+    try {
+        // API'ye giriş isteği gönder
+        const response = await fetch(`${API_BASE_URL}/api/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: n, password: p })
+        });
 
-    const userRef = db.ref('users/' + n);
-    const snapshot = await userRef.once('value');
-    const userData = snapshot.val();
+        const result = await response.json();
 
-    if (userData) {
-        if (userData.password === p) {
-            // Başarılı Giriş: Bilgileri kaydet ve sayfayı tazele
-            sessionStorage.setItem("filiz_chat_nick", n);
-            // Opsiyonel: Giriş yapınca rengini de güncelle
-            if(userData.color) localStorage.setItem("filiz_chat_color", userData.color);
-            location.reload(); 
-        } else {
+        // Şifre yanlışsa uyar
+        if (result.status === "WRONG_PASSWORD") {
             alert("Şifre yanlış!");
+            return;
         }
-    } else {
-        if (confirm("Bu nick ile yeni bir kayıt oluşturulsun mu?")) {
-            const newUser = { 
-                password: p, 
-                role: "Misafir", 
-                isVerified: false, 
-                color: "#00f2ff",
-                joinedAt: Date.now()
-            };
-            await userRef.set(newUser);
-            sessionStorage.setItem("filiz_chat_nick", n); 
-            location.reload();
-        }
-    }
-}
 
-function handleAuthClick() { 
-    // Eğer giriş yapılmışsa (Guest değilse) çıkış yap, yapılmışsa modalı aç
-    if(myName && !myName.startsWith("Guest")) { 
-        if(confirm("Hesabınızdan çıkış yapmak istiyor musunuz?")) { 
-            sessionStorage.clear(); 
-            sessionStorage.clear(); 
+        // Kullanıcı veritabanında yoksa kayıt ol onay kutusunu aç
+        if (result.status === "NOT_FOUND") {
+            if (confirm("Bu nick ile yeni bir kayıt oluşturulsun mu?")) {
+                const regResponse = await fetch(`${API_BASE_URL}/api/register`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: n, password: p })
+                });
+                const regResult = await regResponse.json();
+                
+                // NOT: Turso API'nizin dönüş tipine göre regResult.success veya regResult.status === "SUCCESS" kontrolü yapın
+                if(regResult.success || regResult.status === "SUCCESS") {
+                    // Firebase ile gerçek zamanlı veri eşleşmesini bekleyelim
+                    await db.ref('users/' + n).set({ password: p, role: "Misafir", isVerified: false, color: "#00f2ff", joinedAt: Date.now() });
+                    
+                    if(myName && myName.startsWith("Guest")) {
+                        await db.ref('presence/' + myName).remove();
+                    }
+                    sessionStorage.setItem("filiz_chat_nick", n); 
+                    location.reload();
+                } else {
+                    alert("Kayıt sırasında bir hata oluştu: " + (regResult.message || "Bilinmeyen hata"));
+                }
+            }
+            return;
+        }
+
+        // Giriş tamamen başarılıysa
+        if (result.status === "SUCCESS") {
+            await db.ref('users/' + n).update({ password: p }); // Firebase şifre güvencesi
+            if(myName && myName.startsWith("Guest")) {
+                await db.ref('presence/' + myName).remove();
+            }
+            
+            sessionStorage.setItem("filiz_chat_nick", n);
             location.reload(); 
-        } 
-    } else { 
-        document.getElementById('login-modal').style.display = 'flex'; 
-        document.getElementById('nick-input').focus();
-    } 
-}
+        }
 
-// Renk seçildiğinde kapanması için
-function applyColor(c) { 
-    // Yetki kontrolü (Kurucuysa veya yetkisi varsa)
-    if(myRole === "Kurucu" || myPerms.canUseColors === true) { 
-        currentColor = c; 
-        
-        // UI Güncelle
-        const colorBtn = document.getElementById('current-color-btn');
-        if(colorBtn) colorBtn.style.background = c; 
-        
-        // Tarayıcıya kaydet
-        localStorage.setItem("filiz_chat_color", c); 
-        
-        // Firebase Kalıcı Profil Güncelle (Nick rengi için)
-        db.ref('users/' + myName).update({ color: c }); 
-        
-        // Firebase Anlık Liste Güncelle (Online listesi için)
-        db.ref('presence/' + myName).update({ color: c });
-        
-        // Paneli kapat
-        document.getElementById('color-dropdown').style.display = 'none';
-        console.log("Renk güncellendi: " + c);
-    } else {
-        alert("Renk değiştirme yetkiniz bulunmuyor!");
+    } catch (err) {
+        alert("Giriş bağlantı hatası: " + err.message);
     }
 }
 
-// Emoji seçildiğinde kapanması için (initEmojis fonksiyonu içindeki onclick kısmı)
-function initEmojis() { 
-    const el = document.getElementById('emoji-list'); 
-    ['😊','😂','😍','😎','👍','🔥','❤️','✨','⭐','🎧','📻','🎵'].forEach(e => { 
-        const div = document.createElement('div'); 
-        div.className='emoji-item'; 
-        div.innerText=e; 
-        div.onclick=() => { 
-            document.getElementById('msg').value += e; 
-            // SEÇİM YAPILDIĞINDA KAPAT
-            document.getElementById('emoji-dropdown').style.display = 'none';
-        }; 
-        el.appendChild(div); 
-    }); 
-}
+    function handleAuthClick() { 
+        if(myName && !myName.startsWith("Guest")) { 
+            if(confirm("Hesabınızdan çıkış yapmak istiyor musunuz?")) { 
+                sessionStorage.clear(); 
+                location.reload(); 
+            } 
+        } else { 
+            document.getElementById('login-modal').style.display = 'flex'; 
+            document.getElementById('nick-input').focus();
+        } 
+    }
 
+    function applyColor(c) { 
+        if(myRole === "Kurucu" || myPerms.canUseColors === true) { 
+            currentColor = c; 
+            const colorBtn = document.getElementById('current-color-btn');
+            if(colorBtn) colorBtn.style.background = c; 
+            localStorage.setItem("filiz_chat_color", c); 
+            db.ref('users/' + myName).update({ color: c }); 
+            db.ref('presence/' + myName).update({ color: c });
+            document.getElementById('color-dropdown').style.display = 'none';
+        } else {
+            alert("Renk değiştirme yetkiniz bulunmuyor!");
+        }
+    }
 
- function changeFontSize(d) { fontSize += d; document.getElementById('fs-indicator').innerText = fontSize + "px"; loadMessages(); }
+    function initEmojis() { 
+        const el = document.getElementById('emoji-list'); 
+        if(!el) return;
+        ['😊','😂','😍','😎','👍','🔥','❤️','✨','⭐','🎧','📻','🎵'].forEach(e => { 
+            const div = document.createElement('div'); 
+            div.className='emoji-item'; 
+            div.innerText=e; 
+            div.onclick=() => { 
+                document.getElementById('msg').value += e; 
+                document.getElementById('emoji-dropdown').style.display = 'none';
+            }; 
+            el.appendChild(div); 
+        }); 
+    }
+
+    function changeFontSize(d) { fontSize += d; document.getElementById('fs-indicator').innerText = fontSize + "px"; loadMessages(); }
     function togglePanel(id) { const t = document.getElementById(id); t.style.display = (t.style.display === 'none') ? 'flex' : 'none'; }
     function toggleStyle(t) { if(t==='bold') isBold=!isBold; else isItalic=!isItalic; document.getElementById('btn-'+t).classList.toggle('active-tool'); }
     function closeLogin() { document.getElementById('login-modal').style.display = 'none'; }
-
-
-
-
     function fetchRolesAndUsers() { db.ref('role_settings').on('value', rSnap => { allRoles = rSnap.val() || {}; loadUsers(); }); }
     function clearMsgs() { if(confirm("Sohbeti temizle?")) { db.ref('messages').remove().then(() => { db.ref('messages').push().set({ m: `⚠️ Sohbet ${myName} tarafından temizlenmiştir.`, type: "system" }); }); } }
+    
+    // --- TURSO UYUMLU IP BAN KONTROLÜ ---
     async function checkBanStatus() {
-        const res = await fetch('https://api.ipify.org?format=json');
-        const data = await res.json();
-        const safeIp = data.ip.replace(/\./g, '_');
-        db.ref('banned_ips/' + safeIp).once('value', s => { if(s.exists()) document.body.innerHTML = "<h1 style='color:red; text-align:center;'>ERİŞİM ENGELLENDİ</h1>"; });
-        db.ref('user_registry/' + myName).update({ last_ip: data.ip, last_seen: Date.now() });
+        try {
+            const res = await fetch('https://api.ipify.org?format=json');
+            const data = await res.json();
+            const myIp = data.ip;
+
+            // Turso API'ye logla ve ban kontrolü al
+            const banLogRes = await fetch(`${API_BASE_URL}/api/log-ip`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: myName, ip: myIp, user_agent: navigator.userAgent })
+            });
+            const banLogData = await banLogRes.json();
+
+            if (banLogData.banned) {
+                document.body.innerHTML = `<h1 style='color:red; text-align:center; margin-top:100px;'>ERİŞİM ENGELLENDİ<br><small style='font-size:16px;color:#aaa;'>Sebep: ${banLogData.reason}</small></h1>`;
+            }
+        } catch (e) {
+            console.error("Ban kontrolü yapılamadı (API kapalı olabilir):", e);
+        }
     }
     
-async function quickBanUser(tNick) {
-    // 1. Hedefin verilerini (rütbesini) çek
-    const targetSnap = await db.ref('presence/' + tNick).once('value');
-    const targetData = targetSnap.val();
-    
-    if(!targetData) return alert("Kullanıcı aktif listede bulunamadı.");
+    async function quickBanUser(tNick) {
+        const targetSnap = await db.ref('presence/' + tNick).once('value');
+        const targetData = targetSnap.val();
+        if(!targetData) return alert("Kullanıcı aktif listede bulunamadı.");
 
-    // Rütbe Puanlarını Hesapla
-    const myRank = rolePriority[myRole] || 0;
-    const targetRank = rolePriority[targetData.role] || 0;
+        const myRank = rolePriority[myRole] || 0;
+        const targetRank = rolePriority[targetData.role] || 0;
 
-    // --- HİERARŞİ SİSTEMİ GÜNCELLEMESİ ---
-    // Kurucu her zaman banlayabilir, ama diğerleri kendi rütbesini veya üstünü banlayamaz.
-    if (myRole !== "Kurucu") {
-        if (myRank < targetRank) {
-            alert(`Hata: ${tNick} sizden üst bir rütbede (${targetData.role}). İşlem engellendi!`);
-            return;
-        }
-        if (myRank === targetRank) {
-            alert(`Hata: ${tNick} ile aynı rütbedesiniz. Kendi rütbe arkadaşınızı banlayamazsınız!`);
-            return;
-        }
-    }
-
-    if(!confirm(`${tNick} kullanıcısını banlamak istediğinize emin misiniz?`)) return;
-
-    // 2. IP bilgisini user_registry'den al
-    const regSnap = await db.ref('user_registry/' + tNick).once('value');
-    if(regSnap.exists() && regSnap.val().last_ip) {
-        const safeIp = regSnap.val().last_ip.replace(/\./g, '_');
-        
-        // Veritabanına Ban Kaydı At
-        await db.ref('banned_ips/' + safeIp).set({ 
-            nick: tNick, 
-            bannedBy: myName, 
-            date: Date.now() 
-        });
-
-        // --- LİSTEDEN ANINDA SİLME ---
-        // Kullanıcıyı online listesinden (presence) anında siler
-        await db.ref('presence/' + tNick).remove();
-        
-        // --- SESSİZ BAN GÜNCELLEMESİ ---
-        // Buraya sistem mesajı eklemiyoruz ki sayfa yenilendikçe o uyarılar birikmesin.
-        
-        alert(`${tNick} başarıyla uzaklaştırıldı.`);
-    } else {
-        alert("Kullanıcının IP adresi sistemde kayıtlı değil, işlem yapılamadı.");
-    }
-}
-
-// Enter tuşuna basılıp basılmadığını kontrol eden fonksiyon (Aynen Korundu)
-function checkEnter(event) {
-    if (event.key === "Enter") {
-        confirmLogin();
-    }
-}
-
-// Paneli Aç/Kapat
-function toggleUserActions(nick) {
-    const safeId = "actions-" + nick.replace(/\s+/g, '_');
-    const panel = document.getElementById(safeId);
-    if(panel) {
-        // Diğer açık panelleri kapat
-        document.querySelectorAll('.quick-action-panel').forEach(p => {
-            if(p.id !== safeId) p.style.display = 'none';
-        });
-        // Mevcut olanı aç/kapat
-        panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
-    }
-}
-
-// Sohbetten At (Kick)
-async function kickUser(tNick) {
-    if(confirm(tNick + " kullanıcısını sohbetten atmak istiyor musunuz? (Tekrar gelebilir)")) {
-        // Presence kaydını silerek bağlantısını koparıyoruz
-        await db.ref('presence/' + tNick).remove();
-        
-        // Sisteme mesaj düşür
-        db.ref('messages').push().set({
-            u: "SİSTEM",
-            m: `⚠️ ${tNick} kurallar gereği sohbetten uzaklaştırıldı.`,
-            type: "system"
-        });
-        alert(tNick + " atıldı.");
-    }
-}
-
-// Yetki kontrolü (startAuth fonksiyonu içine veya sonuna ekle)
-async function checkBanViewPerms() {
-    // Eğer admin veya ban kaldırma yetkisi varsa butonu göster
-    if (myPerms && (myPerms.canAccessAdmin || myPerms.canManagePerms)) {
-        document.getElementById('btn-ban-list').style.display = 'inline-block';
-    }
-}
-
-// Ban listesini aç/kapat
-function toggleBanList() {
-    // EĞER TAŞIMA MODU AÇIKSA (mavi çizgiler varsa) PENCEREYİ AÇMA
-    if (document.querySelector('.edit-mode-active')) {
-        console.log("Düzenleme modu aktif, liste açılmadı.");
-        return; 
-    }
-
-    const popup = document.getElementById('ban-list-popup');
-    if (popup.style.display === 'none') {
-        popup.style.display = 'block';
-        loadBanListToPopup();
-    } else {
-        popup.style.display = 'none';
-    }
-}
-
-// Ban listesini Firebase'den çek ve sadece nick göster
-function loadBanListToPopup() {
-    const content = document.getElementById('ban-items-content');
-    content.innerHTML = "<small style='color:#666'>Yükleniyor...</small>";
-
-    db.ref('banned_ips').on('value', snapshot => {
-        content.innerHTML = "";
-        if (!snapshot.exists()) {
-            content.innerHTML = "<div style='padding:10px; text-align:center;'>Yasaklı kimse yok.</div>";
-            return;
+        if (myRole !== "Kurucu") {
+            if (myRank < targetRank) return alert(`Hata: ${tNick} sizden üst bir rütbede!`);
+            if (myRank === targetRank) return alert(`Hata: Kendi rütbe arkadaşınızı banlayamazsınız!`);
         }
 
-        snapshot.forEach(child => {
-            const data = child.val();
-            const safeIpKey = child.key;
-            const nick = data.nick || "Bilinmiyor";
+        if(!confirm(`${tNick} kullanıcısını kalıcı olarak banlamak istiyor musunuz?`)) return;
 
-            const row = document.createElement('div');
-            row.style = "display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);";
-            row.innerHTML = `
-                <span style="color:#eee;">${nick}</span>
-                <button onclick="removeBanFromSohbet('${safeIpKey}')" style="background:transparent; border:1px solid #00fc00; color:#00fc00; font-size:9px; cursor:pointer; border-radius:3px; padding:2px 5px;">KALDIR</button>
-            `;
-            content.appendChild(row);
-        });
-    });
-}
+        // Firebase logundan IP'yi çek ve Turso API'ye ban emri gönder
+        const regSnap = await db.ref('user_registry/' + tNick).once('value');
+        let targetIp = (regSnap.exists() && regSnap.val().last_ip) ? regSnap.val().last_ip : "";
 
-// Sohbet üzerinden ban kaldır (IP göstermeden)
-async function removeBanFromSohbet(safeIpKey) {
-    if (confirm("Bu kişinin yasağı kaldırılsın mı?")) {
-        const snap = await db.ref('banned_ips/' + safeIpKey).once('value');
-        const data = snap.val();
-        
-        // IP günlüğüne geri ekle (Admin panelindeki mantıkla aynı)
-        if (data && data.nick) {
-            await db.ref('user_registry/' + data.nick).set({ 
-                last_ip: safeIpKey.replace(/_/g, '.'), 
-                last_seen: Date.now() 
+        if(targetIp) {
+            try {
+                await fetch(`${API_BASE_URL}/api/admin/ban-ip`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ip: targetIp, reason: "Sohbet içerisinden hızlı ban" })
+                });
+                await db.ref('presence/' + tNick).remove();
+                alert(`${tNick} başarıyla uzaklaştırıldı.`);
+            } catch(e) {
+                alert("Turso Ban işlemi başarısız: " + e.message);
+            }
+        } else {
+            alert("Kullanıcının IP adresi bulunamadığı için sadece odadan düşürüldü.");
+            await db.ref('presence/' + tNick).remove();
+        }
+    }
+
+    function checkEnter(event) { if (event.key === "Enter") confirmLogin(); }
+
+    function toggleUserActions(nick) {
+        const safeId = "actions-" + nick.replace(/\s+/g, '_');
+        const panel = document.getElementById(safeId);
+        if(panel) {
+            document.querySelectorAll('.quick-action-panel').forEach(p => { if(p.id !== safeId) p.style.display = 'none'; });
+            panel.style.display = (panel.style.display === 'flex') ? 'none' : 'flex';
+        }
+    }
+
+    async function kickUser(tNick) {
+        if(confirm(tNick + " kullanıcısını sohbetten atmak istiyor musunuz?")) {
+            await db.ref('presence/' + tNick).remove();
+            db.ref('messages').push().set({ u: "SİSTEM", m: `⚠️ ${tNick} kurallar gereği sohbetten uzaklaştırıldı.`, type: "system" });
+            alert(tNick + " atıldı.");
+        }
+    }
+
+    async function checkBanViewPerms() {
+        if (myPerms && (myPerms.canAccessAdmin || myPerms.canBan)) {
+            const btn = document.getElementById('btn-ban-list');
+            if(btn) btn.style.display = 'inline-block';
+        }
+    }
+
+    function toggleBanList() {
+        if (document.querySelector('.edit-mode-active')) return;
+        const popup = document.getElementById('ban-list-popup');
+        if (popup.style.display === 'none') {
+            popup.style.display = 'block';
+            loadBanListToPopup();
+        } else { popup.style.display = 'none'; }
+    }
+
+    async function loadBanListToPopup() {
+        const content = document.getElementById('ban-items-content');
+        content.innerHTML = "<small style='color:#666'>Turso'dan yükleniyor...</small>";
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/banned-ips`);
+            const data = await res.json();
+            content.innerHTML = "";
+
+            if (!data.rows || data.rows.length === 0) {
+                content.innerHTML = "<div style='padding:10px; text-align:center;'>Yasaklı kimse yok.</div>";
+                return;
+            }
+
+            data.rows.forEach(row => {
+                const ip = row[1]; 
+                const reason = row[2] || "Sebep yok";
+                const div = document.createElement('div');
+                div.style = "display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);";
+                div.innerHTML = `
+                    <span style="color:#eee; font-size:12px;" title="${reason}">${ip}</span>
+                    <button onclick="removeBanFromSohbet('${ip}')" style="background:transparent; border:1px solid #00fc00; color:#00fc00; font-size:9px; cursor:pointer; border-radius:3px; padding:2px 5px;">KALDIR</button>
+                `;
+                content.appendChild(div);
             });
-        }
-        
-        await db.ref('banned_ips/' + safeIpKey).remove();
-        // Sohbetten sistem mesajı (isteğe bağlı)
-        db.ref('messages').push().set({ m: `✅ Bir kullanıcının yasağı kaldırıldı.`, type: "system" });
-    }
-}
-
-// 1. Kullanıcının yetkilerini Firebase'den çek
-let userPerms = {};
-
-async function loadMyPermissions(myRole) {
-    if(myRole === "Kurucu") {
-        // Kurucu her şeyi yapabilir, her şey true
-        permissionMap.forEach(p => userPerms[p.key] = true);
-    } else {
-        const snap = await db.ref('permissions/' + myRole).once('value');
-        userPerms = snap.val() || {};
-    }
-    applyPermissionsToUI(); // Yetkileri ekrana uygula
-}
-
-// 2. Yetkiye göre butonları göster veya gizle
-function applyPermissionsToUI() {
-    // Eğer 'canBan' (Banlama) yetkisi false (tık yok) ise, BAN butonunu gizle
-    if (!userPerms.canBan) {
-        document.getElementById('ban-button').style.display = 'none';
+        } catch(e) { content.innerHTML = "<small style='color:red;'>Hata oluştu.</small>"; }
     }
 
-    // Eğer 'canWrite' (Mesaj yazma) yetkisi false ise, mesaj kutusunu kilitle
-    if (!userPerms.canWrite) {
-        document.getElementById('chat-input').disabled = true;
-        document.getElementById('chat-input').placeholder = "Mesaj yazma yetkiniz yok!";
-    }
-}
-
-// 3. İşlem anında kontrol (Örn: Banlama fonksiyonu)
-function banUser(targetIp) {
-    if (userPerms.canBan === true) {
-        // Yetki VAR (Tık atılmış), işlemi yap
-        db.ref('banned_ips').push({ ip: targetIp });
-    } else {
-        // Yetki YOK (Tık yok), işlemi reddet
-        alert("Bu işlemi yapmaya yetkiniz bulunmuyor!");
-    }
-}
-
-function startHeartbeat() {
-    // Her 30 saniyede bir varlığını güncelle
-    setInterval(() => {
-        if (typeof myName !== 'undefined' && myName) {
-            db.ref('presence/' + myName).update({
-                lastSeen: Date.now(),
-                status: "online"
-            });
-        }
-    }, 30000); 
-}
-
-// Sayfa yüklendiğinde çalışan ana bloğun içine koyabilirsin
-db.ref(".info/connected").on("value", (snap) => {
-    if (snap.val() === true && typeof myName !== 'undefined' && myName) {
-        const presenceRef = db.ref('presence/' + myName);
-        
-        // Verilerini tekrar yazdır (Sıralama ve bilgiler bozulmasın)
-        presenceRef.set({
-            name: myName,
-            role: myRole || "Misafir",
-            color: myColor || "#fff",
-            isVerified: (typeof hasP !== 'undefined' ? hasP : false),
-            tempVerify: (typeof hasT !== 'undefined' ? hasT : false),
-            lastSeen: Date.now()
-        });
-
-        // Koptuğunda silinmesini sağla
-        presenceRef.onDisconnect().remove();
-        
-        // Bağlantı sağlandığına göre nabız sistemini de başlat
-        startHeartbeat();
-    }
-});
-
-document.addEventListener("visibilitychange", function() {
-    if (document.visibilityState === 'visible') {
-        if (typeof myName !== 'undefined' && myName) {
-            db.ref('presence/' + myName).update({ 
-                lastSeen: Date.now(),
-                status: "active"
-            });
+    async function removeBanFromSohbet(ip) {
+        if (confirm("Bu kişinin yasağı kaldırılsın mı?")) {
+            try {
+                await fetch(`${API_BASE_URL}/api/admin/unban-ip`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ip: ip })
+                });
+                db.ref('messages').push().set({ m: `✅ Bir kullanıcının yasağı kaldırıldı.`, type: "system" });
+                loadBanListToPopup();
+            } catch(e) { alert("Ban kaldırılamadı."); }
         }
     }
-});
 </script>
 </body>
 </html>
